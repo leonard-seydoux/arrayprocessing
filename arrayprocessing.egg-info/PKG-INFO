@@ -1,0 +1,32 @@
+Metadata-Version: 1.1
+Name: arrayprocessing
+Version: 0.0.1
+Summary: Array processing tools
+Home-page: http://bitbuc.ipgp.fr
+Author: L. Seydoux
+Author-email: UNKNOWN
+License: GPLv3.0
+Download-URL: https://bitbucket.com/xy/zipball/master
+Description: # ANTENNA
+        ## Array processing python library
+        
+        Super tools and speed up caluclus.
+        First modif and 
+        Second.
+        
+Keywords: wavefield covariance,array processing
+Platform: OS Independent
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GPLv3.0
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires: numpy (>=1.0.0)
