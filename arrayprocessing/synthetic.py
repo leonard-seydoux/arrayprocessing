@@ -95,6 +95,10 @@ def estimated_volume_noise(antenna, frequency, slowness, n_sources=200,
 
 
 def cylindrical(antenna, frequency, slowness, coordinate=(0.0, 0.0)):
+    """
+    Monochromatic cylindrical wave. Return covariance matrix.
+    Coordinates must be in km.
+    """
 
     x, y = antenna.get_xy()
     r = np.sqrt((x - coordinate[0]) ** 2 + (y - coordinate[1]) ** 2)
@@ -105,6 +109,10 @@ def cylindrical(antenna, frequency, slowness, coordinate=(0.0, 0.0)):
 
 
 def cylindrical_wave(antenna, frequency, slowness, coordinate=(0.0, 0.0)):
+    """
+    Monochromatic cylindrical wave. Return wavefield.
+    Coordinates must be in km.
+    """
 
     x, y = antenna.get_xy()
     r = np.sqrt((x - coordinate[0]) ** 2 + (y - coordinate[1]) ** 2)
