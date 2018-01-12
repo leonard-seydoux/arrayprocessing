@@ -10,7 +10,7 @@ from arrayprocessing.reader import read_spectral_width
 from arrayprocessing.covariance import CovarianceMatrix, RealCovariance
 from arrayprocessing.correlation import CorrelationMatrix, correlation
 from arrayprocessing.antenna import Antenna, Map
-from arrayprocessing.beam import Beam  #, CylindricalBeam
+from arrayprocessing.beam import Beam
 
 from arrayprocessing import synthetic
 

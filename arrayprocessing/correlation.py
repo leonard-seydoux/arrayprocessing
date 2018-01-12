@@ -31,16 +31,23 @@ def correlation(covariance_matrix):
 
 class CorrelationMatrix(np.ndarray):
 
-    def bandpass(self, bandwidth, sampling_rate=24):
+    def bandpass(self, bandwidth, sampling_rate=24, triu=False):
         """Filter the signal within bandwidth."""
 
-        n_sensors = self.shape[1]
-        nyquist = 0.5 * sampling_rate
-        bandwidth = [f / nyquist for f in bandwidth]
-        b, a = butter(4, bandwidth, btype='bandpass')
-        for i, j in product(range(n_sensors), repeat=2):
-            self[:, i, j] = filtfilt(b, a, self[:, i, j])
-            self[:, i, j] /= np.max(self[:, i, j])
+        if triu is False:
+            n_sensors = self.shape[1]
+            nyquist = 0.5 * sampling_rate
+            bandwidth = [f / nyquist for f in bandwidth]
+            b, a = butter(4, bandwidth, btype='bandpass')
+            for i, j in product(range(n_sensors), repeat=2):
+                self[:, i, j] = filtfilt(b, a, self[:, i, j])
+                self[:, i, j] /= np.max(self[:, i, j])
+        else:
+            nyquist = 0.5 * sampling_rate
+            bandwidth = [f / nyquist for f in bandwidth]
+            b, a = butter(4, bandwidth, btype='bandpass')
+            for i in range(self.shape[0]):
+                self[i] = filtfilt(b, a, self[i])
 
     def plot(self, ax, lag, antenna, norm=1, **kwargs):
         """Sismological view."""
@@ -77,6 +84,27 @@ class CorrelationMatrix(np.ndarray):
         kwargs.setdefault('rasterized', True)
         return ax.pcolormesh(lag, distances, correlations, **kwargs)
 
+    def pcolormesh_triu(self, ax, lag, antenna, k=0, distances=None, **kwargs):
+        """Acoustic view."""
+
+        # Triangular view
+        trii, trij = np.triu_indices(antenna.dim, k=k)
+
+        if distances is None:
+            distances = antenna.get_distances()
+
+        distances = np.array([distances[i, j] for i, j in zip(trii, trij)])
+        distance_sort = distances.argsort()
+        distances = distances[distance_sort]
+        correlations = self[distance_sort, :]
+
+        # Pcolormesh
+        cmax = np.abs(correlations).max()
+        kwargs.setdefault('vmin', -cmax)
+        kwargs.setdefault('vmax', cmax)
+        kwargs.setdefault('rasterized', True)
+        return ax.pcolormesh(lag, distances, correlations, **kwargs)
+
     def get_maxima(self):
         """Extract travel times from enveloppe."""
 
@@ -91,9 +119,21 @@ class CorrelationMatrix(np.ndarray):
 
         return maxima
 
-    def calculate_envelope(self):
+    def calculate_envelope(self, triu=False):
+        if triu is False:
+            return np.abs(hilbert(self, axis=0)).view(CorrelationMatrix)
+        else:
+            return np.abs(hilbert(self, axis=-1)).view(CorrelationMatrix)
 
-        return np.abs(hilbert(self, axis=0)).view(CorrelationMatrix)
+    def get_triu(self, k=0):
+        """
+        Time on the last dimension because of common scipy operations.
+        """
+
+        # Triangular indexes
+        trii, trij = np.triu_indices(self.shape[1], k=k)
+        self_triu = np.array([self[:, i, j] for i, j in zip(trii, trij)])
+        return self_triu.view(CorrelationMatrix)
 
     # def plot_from(self, ax, reference=0, **kwargs):
     #     correlationss = self.get_from(reference)
