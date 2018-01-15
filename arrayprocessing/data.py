@@ -99,7 +99,8 @@ class Stream(obspy.core.stream.Stream):
         if homogeneity is not True:
             ValueError(" Error : Traces are not homogeneous.")
 
-    def h5read(self, data_path, name='PZ', underscore=True):
+    def h5read(self, data_path, name='PZ', underscore=True,
+               force_start=None):
         """
         Read the data files specified in the datapath.
 
@@ -135,7 +136,11 @@ class Stream(obspy.core.stream.Stream):
         # Header
         stats = obspy.core.trace.Stats()
         stats.sampling_rate = sampling_rate
+
+        # Start time
         stats.starttime = obspy.UTCDateTime(datetime.fromtimestamp(starttime))
+        if force_start is not None:
+            stats.starttime = obspy.UTCDateTime(force_start)
 
         # Collect data into data np.array
         waitbar = ap.logtable.waitbar('Read data')
@@ -203,7 +208,6 @@ class Stream(obspy.core.stream.Stream):
         """
         start = obspy.UTCDateTime(start)
         self.interpolate(sampling_rate, method, start, npts)
-
 
     def binarize(self, epsilon=1e-10):
         """
