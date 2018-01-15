@@ -3,6 +3,7 @@
 
 import numpy as np
 import networkx as nx
+import csv
 
 from matplotlib import pyplot as plt
 from itertools import product
@@ -39,8 +40,8 @@ class Antenna():
     or from a file of geographical coordinates.
     """
 
-    def __init__(self, cartesian_coordinates=None, filename=None, name=None,
-                 geographical_coordinates=None, reference=None):
+    def __init__(self, cartesian_coordinates=None, txt=None,
+                 geographical_coordinates=None, reference=None, csvfile=None):
         """
         Get coordinates of the array sensor between each sensors of the
         antenna. CARTESIAN_COORDINATES are defined in km.
@@ -52,12 +53,34 @@ class Antenna():
             self.dim = len(self.x)
             self.shape = (self.dim, self.dim)
 
-        elif filename is not None:
-            columns = open(filename, 'r').readlines()
+        elif txt is not None:
+            columns = open(txt, 'r').readlines()
             columns = np.transpose([c.split() for c in columns])
             self.name = [str(e) for e in list(columns[0])]
             self.lon = np.array(list(map(float, columns[1])))
             self.lat = np.array(list(map(float, columns[2])))
+            self.x, self.y = geo2xy(self.lon, self.lat, reference)
+            self.dim = len(self.x)
+            self.shape = (self.dim, self.dim)
+
+        elif csvfile is not None:
+            out = csv.reader(open(csvfile, 'r'))
+            header = [h.strip() for h in next(out)]
+            station_name_id = header.index('STA')
+            lon_id = header.index('LON')
+            lat_id = header.index('LAT')
+
+            name = list()
+            lon = list()
+            lat = list()
+
+            for row in out:
+                name.append(row[station_name_id].strip())
+                lat.append(float(row[lat_id]))
+                lon.append(float(row[lon_id]))
+
+            self.lon = np.array(lon)
+            self.lat = np.array(lat)
             self.x, self.y = geo2xy(self.lon, self.lat, reference)
             self.dim = len(self.x)
             self.shape = (self.dim, self.dim)
