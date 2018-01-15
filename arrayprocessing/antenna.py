@@ -254,7 +254,7 @@ class Map(geoaxes.GeoAxes):
 
         proj = self.projection
         extent = self.get_extent()
-        img = wmts.fetch_raster(proj, [159, 162, 54, 58], target_resolution)
+        img = wmts.fetch_raster(proj, extent, target_resolution)
         self.imshow(img[0][0], extent=img[0][1], transform=proj,
                     origin='upper', interpolation='spline36')
 
