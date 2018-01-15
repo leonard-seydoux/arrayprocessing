@@ -79,6 +79,7 @@ class Antenna():
                 lat.append(float(row[lat_id]))
                 lon.append(float(row[lon_id]))
 
+            self.name = name
             self.lon = np.array(lon)
             self.lat = np.array(lat)
             self.x, self.y = geo2xy(self.lon, self.lat, reference)
