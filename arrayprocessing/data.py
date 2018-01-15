@@ -99,7 +99,7 @@ class Stream(obspy.core.stream.Stream):
         if homogeneity is not True:
             ValueError(" Error : Traces are not homogeneous.")
 
-    def h5read(self, data_path, name='PZ'):
+    def h5read(self, data_path, name='PZ', underscore=True):
         """
         Read the data files specified in the datapath.
 
@@ -115,10 +115,13 @@ class Stream(obspy.core.stream.Stream):
         alphabetic order with respect to the station codes.
         """
 
+        # Underscored metadata
+        metadata = '_metadata' if underscore is True else 'metadata'
+
         # Read meta
         traces = h5py.File(data_path, 'r')
-        starttime = np.array(traces['metadata']['t0_UNIX_timestamp'])
-        sampling_rate = np.array(traces['metadata']['fe'])
+        starttime = np.array(traces[metadata]['t0_UNIX_timestamp'])
+        sampling_rate = np.array(traces[metadata]['fe'])
         station_codes = [key for key in traces[name].keys()]
 
         # Sizes
@@ -190,6 +193,17 @@ class Stream(obspy.core.stream.Stream):
 
         # Get the new time vector
         self.times = self.get_times()
+
+    def homogenize(self, sampling_rate=20.0, method='linear',
+                   start='2010-01-01', npts=24 * 3600 * 20):
+        """
+        Same prototype than homogenize but allows for defining the date in str
+        format (instead of UTCDateTime).
+        Same idea than with the cut method.
+        """
+        start = obspy.UTCDateTime(start)
+        self.interpolate(sampling_rate, method, start, npts)
+
 
     def binarize(self, epsilon=1e-10):
         """
