@@ -41,7 +41,8 @@ class Antenna():
     """
 
     def __init__(self, cartesian_coordinates=None, txt=None,
-                 geographical_coordinates=None, reference=None, csvfile=None):
+                 geographical_coordinates=None, reference=None, csvfile=None,
+                 filtre=None):
         """
         Get coordinates of the array sensor between each sensors of the
         antenna. CARTESIAN_COORDINATES are defined in km.
@@ -75,9 +76,17 @@ class Antenna():
             lat = list()
 
             for row in out:
-                name.append(row[station_name_id].strip())
-                lat.append(float(row[lat_id]))
-                lon.append(float(row[lon_id]))
+                if filtre:
+                    filtre_id = header.index(filtre.upper())
+                    if int(row[filtre_id]) == 1:
+                        name.append(row[station_name_id].strip())
+                        lat.append(float(row[lat_id]))
+                        lon.append(float(row[lon_id]))
+
+                else:
+                    name.append(row[station_name_id].strip())
+                    lat.append(float(row[lat_id]))
+                    lon.append(float(row[lon_id]))
 
             self.name = name
             self.lon = np.array(lon)
