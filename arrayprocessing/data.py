@@ -58,7 +58,7 @@ class Stream(obspy.core.stream.Stream):
 
         return times
 
-    def read(self, data_path, sort=False, verbose=True):
+    def read(self, data_path, sort=False):
         """
         Read the data files specified in the datapath.
 
