@@ -23,6 +23,10 @@ from scipy.signal import butter, filtfilt, hilbert, tukey, bessel, decimate
 #     return f_pad
 
 def correlation(covariance_matrix):
+    """
+    Covariance matrix is a np.ndarray of shape
+    n_frequencies, n_stations, n_stations
+    """
 
     correlation = fft.ifft(covariance_matrix, axis=0)
     correlation = np.real(fft.fftshift(correlation, axes=0))
@@ -34,33 +38,49 @@ class CorrelationMatrix(np.ndarray):
     def bandpass(self, bandwidth, sampling_rate=24, triu=False):
         """Filter the signal within bandwidth."""
 
+        nyquist = 0.5 * sampling_rate
+        bandwidth = [f / nyquist for f in bandwidth]
+        b, a = butter(4, bandwidth, btype='bandpass')
+
         if triu is False:
             n_sensors = self.shape[1]
-            nyquist = 0.5 * sampling_rate
-            bandwidth = [f / nyquist for f in bandwidth]
-            b, a = butter(4, bandwidth, btype='bandpass')
             for i, j in product(range(n_sensors), repeat=2):
                 self[:, i, j] = filtfilt(b, a, self[:, i, j])
                 self[:, i, j] /= np.max(self[:, i, j])
         else:
-            nyquist = 0.5 * sampling_rate
-            bandwidth = [f / nyquist for f in bandwidth]
-            b, a = butter(4, bandwidth, btype='bandpass')
             for i in range(self.shape[0]):
                 self[i] = filtfilt(b, a, self[i])
+                self[i] /= np.max(self[i])
 
-    def plot(self, ax, lag, antenna, norm=1, **kwargs):
+    def plot(self, ax, lag, antenna, norm=1, k=0, **kwargs):
         """Sismological view."""
 
         # Triangular view
-        triu_i, triu_j = np.triu_indices(self.shape[1], k=0)
+        triu_i, triu_j = np.triu_indices(self.shape[1], k=k)
         distances = antenna.get_distances()
 
         # Plot
-        kwargs.setdefault('c', 'k')
         kwargs.setdefault("lw", 0.2)
-        for i, j in zip(triu_i, triu_j):
-            ax.plot(lag, norm * self[:, i, j] + distances[i, j], **kwargs)
+
+        if len(self.shape) == 3:
+            for i, j in zip(triu_i, triu_j):
+                ax.plot(lag, norm * self[:, i, j] + distances[i, j], **kwargs)
+
+        elif len(self.shape) == 2:
+
+            # Triangular view
+            trii, trij = np.triu_indices(antenna.dim, k=k)
+
+            if distances is None:
+                distances = antenna.get_distances()
+
+            distances = np.array([distances[i, j] for i, j in zip(trii, trij)])
+            distance_sort = distances.argsort()
+            distances = distances[distance_sort]
+            correlations = self[distance_sort, :]
+
+            for i in range(self.shape[0]):
+                ax.plot(lag, norm * correlations[i] + distances[i], **kwargs)
 
     def pcolormesh(self, ax, lag, antenna, k=0, distances=None, **kwargs):
         """Acoustic view."""
@@ -119,8 +139,9 @@ class CorrelationMatrix(np.ndarray):
 
         return maxima
 
-    def calculate_envelope(self, triu=False):
-        if triu is False:
+    def calculate_envelope(self):
+
+        if len(self.shape) == 3:
             return np.abs(hilbert(self, axis=0)).view(CorrelationMatrix)
         else:
             return np.abs(hilbert(self, axis=-1)).view(CorrelationMatrix)
@@ -129,11 +150,9 @@ class CorrelationMatrix(np.ndarray):
         """
         Time on the last dimension because of common scipy operations.
         """
-
-        # Triangular indexes
         trii, trij = np.triu_indices(self.shape[1], k=k)
-        self_triu = np.array([self[:, i, j] for i, j in zip(trii, trij)])
-        return self_triu.view(CorrelationMatrix)
+        triu = np.array([self[:, i, j] for i, j in zip(trii, trij)])
+        return triu.view(CorrelationMatrix)
 
     # def plot_from(self, ax, reference=0, **kwargs):
     #     correlationss = self.get_from(reference)

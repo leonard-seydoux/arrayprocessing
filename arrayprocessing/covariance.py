@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from numpy.linalg import eigvalsh, eig, svd
 from copy import deepcopy
-from arrayprocessing.maths import xcov
+from arrayprocessing.maths import xcov, xcov_std
 
 
 class CovarianceMatrix(np.ndarray):
@@ -90,6 +90,14 @@ class CovarianceMatrix(np.ndarray):
         covariance = U.dot(D).dot(V)
         return covariance.view(ap.CovarianceMatrix)
 
+    def get_triu(self, k=0):
+        """
+        Frequency on the last dimension because of common scipy operations.
+        """
+        trii, trij = np.triu_indices(self.shape[1], k=k)
+        triu = np.array([self[:, i, j] for i, j in zip(trii, trij)])
+        return triu.view(CovarianceMatrix)
+
 
 class RealCovariance():
 
@@ -139,7 +147,7 @@ class RealCovariance():
 
         return self
 
-    def calculate(self, average=20, overlap=None):
+    def calculate(self, average=20, overlap=None, standardize=False):
         """
         Calculation of the array covariance matrix from the array data vectors
         stored in the spectra matrix (should be n_traces x n_windows x n_freq).
@@ -159,9 +167,11 @@ class RealCovariance():
         self.covariance = CovarianceMatrix(shape=covariance_shape, dtype=ci)
         waitbar = ap.logtable.waitbar('Covariance')
 
+        xc = xcov if standardize is False else xcov_std
+
         # Compute
         for wid in range(n_average):
-            self.covariance[wid] = xcov(
+            self.covariance[wid] = xc(
                 wid, self.stream.spectra, overlap, average)
             waitbar.progress(wid / (n_average - 1))
 
