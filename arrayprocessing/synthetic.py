@@ -94,6 +94,47 @@ def estimated_volume_noise(antenna, frequency, slowness, n_sources=200,
     return covariance.view(ap.CovarianceMatrix).astype(complex)
 
 
+def spherical(antenna, frequency, slowness, xyz=None, llz=None, depth=0):
+    """
+    Monochromatic spherical wave. Return wavefield.
+    XY coordinates must be in km.
+    LL means lon, lat.
+    """
+    x, y = antenna.get_xy()
+
+    if llz is not None:
+        xy = ap.antenna.geo2xy(*llz[:2], reference=antenna.get_reference())
+        z = llz[-1]
+        xyz = (xy[0], xy[1], z)
+
+    depth = depth + 0 * y
+    r = np.sqrt((x - xyz[0]) ** 2 + (y - xyz[1]) ** 2 + (depth - xyz[2]) ** 2)
+    wavenumber = 2 * np.pi * frequency * slowness
+    focal = 1 / (r + 1e-6) * np.exp(-1j * wavenumber * r)
+    covariance = xouter(focal)
+    return covariance.view(ap.CovarianceMatrix).astype(complex)
+
+
+def spherical_wave(antenna, frequency, slowness, xyz=None, llz=None, depth=0):
+    """
+    Monochromatic spherical wave. Return wavefield.
+    XY coordinates must be in km.
+    LL means lon, lat.
+    """
+    x, y = antenna.get_xy()
+
+    if llz is not None:
+        xy = ap.antenna.geo2xy(*llz[:2], reference=antenna.get_reference())
+        z = llz[-1]
+        xyz = (xy[0], xy[1], z)
+
+    depth = depth + 0 * y
+    r = np.sqrt((x - xyz[0]) ** 2 + (y - xyz[1]) ** 2 + (depth - xyz[2]) ** 2)
+    wavenumber = 2 * np.pi * frequency * slowness
+    focal = 1 / (r + 1e-6) * np.exp(-1j * wavenumber * r)
+    return focal
+
+
 def cylindrical(antenna, frequency, slowness, coordinate=(0.0, 0.0)):
     """
     Monochromatic cylindrical wave. Return covariance matrix.
