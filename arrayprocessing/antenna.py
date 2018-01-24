@@ -14,6 +14,7 @@ from copy import deepcopy
 from cartopy.feature import NaturalEarthFeature as nef
 from matplotlib import ticker
 from matplotlib import patheffects
+from cartopy.crs import TransverseMercator
 
 
 def geo2xy(lon, lat, reference=None):
@@ -118,11 +119,23 @@ class Antenna():
         """
         return self.x, self.y
 
+    def get_dim(self):
+        """
+        Returns station coordinates in km.
+        """
+        return self.dim
+
     def get_ll(self):
         """
         Returns station coordinates.
         """
-        return self.lon, self.lat
+        return np.vstack((self.lon, self.lat))
+
+    def get_reference(self):
+        """
+        Returns barycenter.
+        """
+        return np.mean(self.lon), np.mean(self.lat)
 
     def get_names(self):
         """
@@ -203,11 +216,12 @@ class Antenna():
 
 class Map(geoaxes.GeoAxes):
 
-    def __init__(self, figsize=[4, 5], ax=None, extent=None):
+    def __init__(self, figsize=[4, 5], ax=None, extent=None,
+                 projection=crs.PlateCarree()):
 
         if ax is None:
             fig = plt.figure(figsize=figsize)
-            ax = fig.add_axes([0, 0, 1, 1], projection=crs.PlateCarree())
+            ax = fig.add_axes([0, 0, 1, 1], projection=projection)
             ax.outline_patch.set_lw(0.5)
             self.__dict__ = ax.__dict__
 
@@ -222,7 +236,7 @@ class Map(geoaxes.GeoAxes):
         kwargs.setdefault('ms', 6)
         kwargs.setdefault('mfc', '#F5962A')
         kwargs.setdefault('mew', 0.5)
-        kwargs.setdefault('transform', self.projection)
+        kwargs.setdefault('transform', crs.PlateCarree())
         self.plot(*coordinates, 'v', **kwargs)
 
     def add_world_ocean_basemap(self, target_resolution=[600, 600]):
@@ -265,7 +279,7 @@ class Map(geoaxes.GeoAxes):
         extent = self.get_extent()
         img = wmts.fetch_raster(proj, extent, target_resolution)
         self.imshow(img[0][0], extent=img[0][1], transform=proj,
-                    origin='upper', interpolation='spline36')
+                    origin='upper')
 
     def fancy_ticks(self, thickness=0.03, n_lon=7, n_lat=5, size=9):
 
@@ -330,6 +344,26 @@ class Map(geoaxes.GeoAxes):
         self.set_yticklabels(latlabels)
         self.set_extent(outer)
 
+    def ticks(self, n_lon=7, n_lat=5):
+
+        # Extract map meta from ax
+        extent = self.get_extent()
+        extent_lon = np.linspace(extent[0], extent[1], n_lon)
+        extent_lat = np.linspace(extent[2], extent[3], n_lat)
+        proj = self.projection
+
+        self.set_xticks(extent_lon)
+        self.set_yticks(extent_lat)
+
+        degree = u'\N{DEGREE SIGN}'
+        dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
+        lonlabels = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lon]
+        latlabels = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lat]
+        lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lonlabels]
+        latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in latlabels]
+        self.set_xticklabels(lonlabels)
+        self.set_yticklabels(latlabels)
+
     def repel_labels(self, coordinates, labels, k=0.01, fontsize=6, color='k'):
 
         x, y = coordinates
@@ -368,6 +402,7 @@ class Map(geoaxes.GeoAxes):
                               bbox=dict(boxstyle='square,pad=0',
                                         facecolor=(0, 0, 0, 0),
                                         linewidth=0))
+
             t.set_fontname('Consolas')
             t.set_fontsize(fontsize)
             t.set_fontweight('bold')
@@ -411,3 +446,43 @@ class Map(geoaxes.GeoAxes):
                   interpolation='bicubic')
 
         ax.plot(extent[0], extent[2], 's', **marker_kw)
+
+    def add_lands(self, res='10m', lw=0.3, c='k', fc=(0, 0, 0, 0)):
+        """Add coastlines with scalable linewidth"""
+
+        land = nef('physical', 'land', '10m')
+        self.add_feature(land, facecolor=fc, linewidth=lw, edgecolor=c)
+
+    def scale_bar(self, length=50, location=(0.5, 0.05), lw=3):
+        """
+        Adds a scale bar to the axes.
+        """
+
+        # Get the limits of the axis in lat long
+        west, east, south, north = self.get_extent(self.projection)
+
+        # Make tmc horizontally centred on the middle of the map,
+        # vertically at scale bar location
+        horizontal = (east + west) / 2
+        vertical = south + (north - south) * location[1]
+        tmc = TransverseMercator(horizontal, vertical)
+
+        # Get the extent of the plotted area in coordinates in metres
+        left, right, bottom, top = self.get_extent(tmc)
+
+        # Turn the specified scalebar location into coordinates in metres
+        bar_x = left + (right - left) * location[0]
+        bar_y = bottom + (top - bottom) * location[1]
+
+        # Generate the x coordinate for the ends of the scalebar
+        left_x = [bar_x - length * 500, bar_x + length * 500]
+
+        # Plot the scalebar
+        self.plot(left_x, 2 * [bar_y], '|-',
+                  transform=tmc, color='k', lw=lw, mew=lw)
+
+        # Plot the scalebar label
+        bar_text = str(length) + ' km'
+        text_y = bottom + (top - bottom) * (location[1] + 0.01)
+        self.text(bar_x, text_y, bar_text, transform=tmc, ha='center',
+                  va='bottom', weight='normal')
