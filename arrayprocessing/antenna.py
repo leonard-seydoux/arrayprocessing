@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import copy
 import numpy as np
 import networkx as nx
 import csv
@@ -206,12 +207,15 @@ class Antenna():
         return ioriented
 
     def select(self, indexes):
-        self.name = self.name[indexes]
-        self.lon = self.lon[indexes]
-        self.lat = self.lat[indexes]
-        self.x, self.y = self.x[indexes], self.y[indexes]
-        self.dim = len(self.x)
-        self.shape = (self.dim, self.dim)
+
+        selected = copy.deepcopy(self)
+        selected.name = [selected.name[i] for i in indexes]
+        selected.lon = selected.lon[indexes]
+        selected.lat = selected.lat[indexes]
+        selected.x, selected.y = selected.x[indexes], selected.y[indexes]
+        selected.dim = len(selected.x)
+        selected.shape = (selected.dim, selected.dim)
+        return selected
 
 
 class Map(geoaxes.GeoAxes):
