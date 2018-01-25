@@ -4,11 +4,16 @@
 # Calculation of the covariance matrix from raw seismograms.
 
 import numpy as np
+import copy
 
 from obspy.signal.tf_misfit import cwt
 from numba import jit, complex128, int32
 from math import factorial
 from numpy.linalg import eigvalsh, eig
+
+
+def phase(data, **kwargs):
+    return np.exp(1j * np.angle(data))
 
 
 def xouter(complex_vector):
@@ -72,6 +77,31 @@ def xcov(wid, spectra, overlap, average):
     for swid in range(1, average - 1):
         X += np.conj(spectra[:, None, beg + swid, :]) * \
             spectra[:, beg + swid, :]
+    return X
+
+
+@jit(complex128(int32, complex128, int32, int32))
+def xcov_std(wid, spectra_full, overlap, average):
+    """
+    Calculation of the array covariance matrix from the array data vectors
+    stored in the spectra matrix (should be n_traces x n_windows x n_freq),
+    over one set of averaged windows.
+    """
+    n_traces, n_windows, n_frequencies = spectra_full.shape
+    beg = overlap * wid
+    end = beg + average
+    spectra = copy.deepcopy(spectra_full[:, beg:end, :])
+
+    for fid in range(n_frequencies):
+        for sid in range(n_traces):
+            spectra[sid, :, fid] -= np.mean(spectra[sid, :, fid])
+            var = np.var(spectra[sid, :, fid].real) +\
+                np.var(spectra[sid, :, fid].imag)
+            spectra[sid, :, fid] /= np.sqrt(var)
+
+    X = spectra[:, None, 0, :] * np.conj(spectra[:, 0, :])
+    for swid in range(1, average - 1):
+        X += np.conj(spectra[:, None, swid, :]) * spectra[:, swid, :]
     return X
 
 
