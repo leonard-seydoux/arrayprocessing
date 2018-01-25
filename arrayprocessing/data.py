@@ -395,7 +395,7 @@ class Stream(obspy.core.stream.Stream):
         # Generate canvas if no axes are given
         if ax is None:
             gs = dict(width_ratios=[50, 1])
-            fig, ax = plt.subplots(2, figsize=(8, 3), gridspec_kw=gs)
+            fig, ax = plt.subplots(1, 2, figsize=(8, 3), gridspec_kw=gs)
             ax = ax.ravel()
         else:
             fig = ax.figure
@@ -421,6 +421,7 @@ class Stream(obspy.core.stream.Stream):
             cax.set_ylabel('Spectral amplitude (dBA)')
         else:
             plt.colorbar(img, cax=ax[1])
+            ax[1].set_ylabel('Spectral amplitude (dBA)')
 
         # Save
         if figure_file_name is not None:
