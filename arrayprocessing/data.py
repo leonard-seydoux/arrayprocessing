@@ -383,17 +383,20 @@ class Stream(obspy.core.stream.Stream):
         time_step = times[1] - times[0]
         ax.set_xlim(times[0], times[-1] + time_step)
 
+        # Save
         if figure_file_name is not None:
             fig.savefig(figure_file_name, dpi=300, bbox_inches='tight')
         else:
             return fig, ax
 
-    def spectrogram(self, code=None, ax=None, cax=None, **kwargs):
+    def spectrogram(self, code=None, ax=None, cax=None, figure_file_name=None,
+                    **kwargs):
 
         # Generate canvas if no axes are given
         if ax is None:
-            gs = dict(width_ratio=[50, 1])
+            gs = dict(width_ratios=[50, 1])
             fig, ax = plt.subplots(2, figsize=(8, 3), gridspec_kw=gs)
+            ax = ax.ravel()
         else:
             fig = ax.figure
 
@@ -409,7 +412,7 @@ class Stream(obspy.core.stream.Stream):
         spectrum = np.log10(spectrum)
         times = self.spectral_times
         extended_times = np.hstack((times, times[-1] + (times[1] - times[0])))
-        img = ax.pcolormesh(extended_times, self.frequencies, spectrum,
+        img = ax[0].pcolormesh(extended_times, self.frequencies, spectrum,
                             **kwargs)
 
         # Colorbar
@@ -417,4 +420,10 @@ class Stream(obspy.core.stream.Stream):
             plt.colorbar(img, cax=cax)
             cax.set_ylabel('Spectral amplitude (dBA)')
         else:
-            plt.colorbar()
+            plt.colorbar(img, cax=ax[1])
+
+        # Save
+        if figure_file_name is not None:
+            fig.savefig(figure_file_name, dpi=300, bbox_inches='tight')
+        else:
+            return fig, ax
