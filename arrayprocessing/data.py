@@ -222,7 +222,7 @@ class Stream(obspy.core.stream.Stream):
         # Binarize
         for index, trace in enumerate(self):
             waitbar.progress((index + 1) / n_traces)
-            trace.data /= (np.abs(trace.data) + epsilon)
+            trace.data = trace.data / (np.abs(trace.data) + epsilon)
 
     def stationarize(self, window=11, order=1, epsilon=1e-10):
         """
@@ -238,7 +238,7 @@ class Stream(obspy.core.stream.Stream):
         for index, trace in enumerate(self):
             waitbar.progress((index + 1) / n_traces)
             smooth = ap.maths.savitzky_golay(np.abs(trace.data), window, order)
-            trace.data /= (smooth + epsilon)
+            trace.data = trace.data / (smooth + epsilon)
 
     def whiten(self, segment_duration_sec, method='onebit', smooth=11):
         """
@@ -356,7 +356,7 @@ class Stream(obspy.core.stream.Stream):
             # Plot traces
             for index, trace in enumerate(self):
                 trace.data[np.isnan(trace.data)] = 0.0
-                trace.data /= (scale * trace.data.std() + 1e-4)
+                trace.data = trace.data / (scale * trace.data.std() + 1e-4)
                 ax.plot(times, trace.data + index + 1, **kwargs)
 
             # Cosmetics
@@ -375,7 +375,7 @@ class Stream(obspy.core.stream.Stream):
             # Show trace at given index
             trace = self[index]
             trace.data[np.isnan(trace.data)] = 0.0
-            trace.data /= (scale * trace.data.std() + 1e-4)
+            trace.data = trace.data / (scale * trace.data.std() + 1e-4)
             ax.plot(times, trace.data, **kwargs)
             ax.set_ylim([-1, 1])
 
