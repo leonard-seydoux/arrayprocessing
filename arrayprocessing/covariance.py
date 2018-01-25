@@ -253,6 +253,9 @@ class RealCovariance():
     def get_coherence(self):
         return self.times, self.frequencies, self.coherence.T
 
+    def get_covariance(self):
+        return self.times, self.frequencies, self.covariance
+
     def get_eigenvectors(self):
         return self.times, self.frequencies, self.eigenvectors
 
