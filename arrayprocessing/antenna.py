@@ -132,6 +132,12 @@ class Antenna():
         """
         return np.vstack((self.lon, self.lat))
 
+    def get_llz(self):
+        """
+        Returns station coordinates.
+        """
+        return np.vstack((self.lon, self.lat, np.zeros(self.dim)))
+
     def get_reference(self):
         """
         Returns barycenter.
@@ -454,7 +460,7 @@ class Map(geoaxes.GeoAxes):
     def add_lands(self, res='10m', lw=0.3, c='k', fc=(0, 0, 0, 0)):
         """Add coastlines with scalable linewidth"""
 
-        land = nef('physical', 'land', '10m')
+        land = nef('physical', 'land', res)
         self.add_feature(land, facecolor=fc, linewidth=lw, edgecolor=c)
 
     def scale_bar(self, length=50, location=(0.5, 0.05), lw=3):

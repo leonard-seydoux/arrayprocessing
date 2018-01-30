@@ -97,7 +97,7 @@ def xcov_std(wid, spectra_full, overlap, average):
             spectra[sid, :, fid] -= np.mean(spectra[sid, :, fid])
             var = np.var(spectra[sid, :, fid].real) +\
                 np.var(spectra[sid, :, fid].imag)
-            spectra[sid, :, fid] /= np.sqrt(var)
+            spectra[sid, :, fid] /= var ** (1/4)
 
     X = spectra[:, None, 0, :] * np.conj(spectra[:, 0, :])
     for swid in range(1, average - 1):

@@ -82,6 +82,40 @@ class CorrelationMatrix(np.ndarray):
             for i in range(self.shape[0]):
                 ax.plot(lag, norm * correlations[i] + distances[i], **kwargs)
 
+    def fill_between(self, ax, lag, antenna, norm=1, k=0, **kwargs):
+        """Sismological view."""
+
+        # Triangular view
+        triu_i, triu_j = np.triu_indices(self.shape[1], k=k)
+        distances = antenna.get_distances()
+
+        # Plot
+        kwargs.setdefault("lw", 0.2)
+
+        if len(self.shape) == 3:
+            for i, j in zip(triu_i, triu_j):
+                ax.fill_between(lag, distances[i, j],
+                                norm * self[:, i, j] + distances[i, j],
+                                **kwargs)
+
+        elif len(self.shape) == 2:
+
+            # Triangular view
+            trii, trij = np.triu_indices(antenna.dim, k=k)
+
+            if distances is None:
+                distances = antenna.get_distances()
+
+            distances = np.array([distances[i, j] for i, j in zip(trii, trij)])
+            distance_sort = distances.argsort()
+            distances = distances[distance_sort]
+            correlations = self[distance_sort, :]
+
+            for i in range(self.shape[0]):
+                ax.fill_between(
+                    lag, distances[i],
+                    norm * correlations[i] + distances[i], **kwargs)
+
     def pcolormesh(self, ax, lag, antenna, k=0, distances=None, **kwargs):
         """Acoustic view."""
 
