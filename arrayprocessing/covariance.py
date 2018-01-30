@@ -259,7 +259,7 @@ class RealCovariance():
     def get_eigenvectors(self):
         return self.times, self.frequencies, self.eigenvectors
 
-    def show_coherence(self, ax=None, cax=None, figure_file_name=None, **kwargs):
+    def show_coherence(self, ax=None, cax=None, path_figure=None, **kwargs):
 
         if ax is None:
 
@@ -281,7 +281,7 @@ class RealCovariance():
         cax.set_ylabel('Spectral width')
 
         # Save
-        if figure_file_name is not None:
-            fig.savefig(figure_file_name, dpi=300, bbox_inches='tight')
+        if path_figure is not None:
+            fig.savefig(path_figure, dpi=300, bbox_inches='tight')
         else:
             return fig, (ax, cax)
