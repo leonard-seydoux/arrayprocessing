@@ -271,7 +271,8 @@ class Stream(obspy.core.stream.Stream):
         self.cut(pad=True, fill_value=0, starttime=self[0].stats.starttime,
                  endtime=self[0].stats.starttime + duration)
 
-    def stft(self, segment_duration_sec, bandwidth=None, **kwargs):
+    def stft(self, segment_duration_sec, bandwidth=None, overlap=0.5,
+             **kwargs):
         """
         Obain array spectra (short window Fourier transform) from complex
         spectrogram function (mlab).
@@ -280,7 +281,7 @@ class Stream(obspy.core.stream.Stream):
         # Short-time Fourier transform arguments
         kwargs.setdefault('fs', self[0].stats.sampling_rate)
         kwargs.setdefault('nperseg', int(segment_duration_sec * kwargs['fs']))
-        kwargs.setdefault('noverlap', kwargs['nperseg'] // 2)
+        kwargs.setdefault('noverlap', int(kwargs['nperseg'] * overlap))
         kwargs.setdefault('nfft', int(2**np.ceil(np.log2(kwargs['nperseg']))))
 
         # Other default STFT keyword arguments
