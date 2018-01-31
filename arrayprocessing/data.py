@@ -413,7 +413,7 @@ class Stream(obspy.core.stream.Stream):
         times = self.spectral_times
         extended_times = np.hstack((times, times[-1] + (times[1] - times[0])))
         img = ax[0].pcolormesh(extended_times, self.frequencies, spectrum,
-                            **kwargs)
+                               **kwargs)
 
         # Colorbar
         if cax is not None:
