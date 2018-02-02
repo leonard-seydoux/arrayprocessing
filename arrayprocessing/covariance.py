@@ -9,7 +9,6 @@ import _pickle as pickle
 import matplotlib.pyplot as plt
 
 from numpy.linalg import eigvalsh, eig, svd
-from copy import deepcopy
 from arrayprocessing.maths import xcov, xcov_std
 
 
@@ -60,7 +59,6 @@ class CovarianceMatrix(np.ndarray):
         """
 
         eigenvalues = self.get_eigenvalues(normalization='sum')
-        rank_max = len(eigenvalues)
 
         # In case of 0-valued data
         if eigenvalues.sum() == 0:
@@ -176,10 +174,10 @@ class RealCovariance():
             waitbar.progress(wid / (n_average - 1))
 
         # Get times
-        times = self.stream.spectral_times[::average // 2]
+        times = self.stream.spectral_times[::overlap]
         times = times[:n_times]
         dtimes = times[1] - times[0]
-        times = np.insert(times, len(times), times[-1] + dtimes)
+        times = np.insert(times, len(times), times[-1] + (ratio - 1) * dtimes)
         self.times = times
         self.frequencies = self.stream.frequencies
 
@@ -266,6 +264,9 @@ class RealCovariance():
             # Create axis
             gs = dict(width_ratios=[50, 1], wspace=0.1)
             fig, (ax, cax) = plt.subplots(1, 2, figsize=(8, 3), gridspec_kw=gs)
+
+        else:
+            fig = ax.figure
 
         # Default options
         kwargs.setdefault('cmap', 'RdYlBu')
