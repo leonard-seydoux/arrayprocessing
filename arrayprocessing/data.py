@@ -41,7 +41,6 @@ class Stream(obspy.core.stream.Stream):
         """
         Initialize the class with inherited.
         """
-
         super(Stream, self).__init__()
 
     def get_times(self):
@@ -74,7 +73,7 @@ class Stream(obspy.core.stream.Stream):
         alphabetic order with respect to the station codes.
         """
 
-        waitbar = ap.logtable.waitbar('Read data')
+        waitbar = ap.logtable.waitbar('Read seismograms')
 
         # If data_path is a str, then only a single trace or a bunch of
         # seismograms with regexp
@@ -126,12 +125,7 @@ class Stream(obspy.core.stream.Stream):
         station_codes = [key for key in traces[name].keys()]
 
         # Sizes
-        n_times = len(traces[name][station_codes[0]]['Z'])
         n_stations = len(station_codes)
-
-        # Times
-        duration_seconds = (n_times / sampling_rate)
-        times = np.linspace(0, duration_seconds, n_times, endpoint=False)
 
         # Header
         stats = obspy.core.trace.Stats()
@@ -397,7 +391,7 @@ class Stream(obspy.core.stream.Stream):
         if ax is None:
             gs = dict(width_ratios=[50, 1])
             fig, ax = plt.subplots(1, 2, figsize=(8, 3), gridspec_kw=gs)
-            ax = ax.ravel()
+            ax, cax = ax.ravel()
         else:
             fig = ax.figure
 
@@ -413,16 +407,12 @@ class Stream(obspy.core.stream.Stream):
         spectrum = np.log10(spectrum)
         times = self.spectral_times
         extended_times = np.hstack((times, times[-1] + (times[1] - times[0])))
-        img = ax[0].pcolormesh(extended_times, self.frequencies, spectrum,
-                               **kwargs)
+        img = ax.pcolormesh(extended_times, self.frequencies, spectrum,
+                            **kwargs)
 
         # Colorbar
-        if cax is not None:
-            plt.colorbar(img, cax=cax)
-            cax.set_ylabel('Spectral amplitude (dBA)')
-        else:
-            plt.colorbar(img, cax=ax[1])
-            ax[1].set_ylabel('Spectral amplitude (dBA)')
+        plt.colorbar(img, cax=cax)
+        cax.set_ylabel('Spectral amplitude (dBA)')
 
         # Save
         if figure_file_name is not None:
