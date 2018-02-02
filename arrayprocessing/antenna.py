@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+# Tools for dealing with seismic array geometries and mapping.
 
 import copy
 import numpy as np
