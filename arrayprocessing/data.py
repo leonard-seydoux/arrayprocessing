@@ -11,17 +11,31 @@ import arrayprocessing as ap
 
 from datetime import datetime
 from matplotlib import pyplot as plt
-from matplotlib import dates as mdt
+from matplotlib import dates as md
 from scipy.signal import stft, istft
+from statsmodels import robust
 
 
-def read(*args, **kwargs):
-    """
-    Top-level read function, returns Stream object.
+def read(*args):
+    """ (Top-level). Read the data files specified in the datapath with
+        arrayprocessing.Stream.read.
+
+    This method uses the obspy's read method itself. A check for the
+    homogeneity of the seismic traces (same number of samples) is done a
+    the end. If the traces are not of same size, an warning message
+    shows up.
+
+    No homogeneity check is returned by the function.
+
+    Arguments:
+    ----------
+        data_path (str or list): path to the data. Path to a single file
+            (str), to several files using UNIX regexp (str), or a list of
+            files (list). See obspy.read method for more details.
     """
 
     data = ap.Stream()
-    data.read(*args, **kwargs)
+    data.read(*args)
     return data
 
 
@@ -44,59 +58,59 @@ class Stream(obspy.core.stream.Stream):
         super(Stream, self).__init__()
 
     def get_times(self):
-        """
-        Extract the times from the first stream object and
-        convert it to a matplotlib datenum vector.
+        """ Extract the times from the first stream object and convert it to
+            a matplotlib datenum vector.
         """
 
         times = self[0].times()
         times /= 24 * 3600
         times -= times[0]
         start = self[0].stats.starttime.datetime
-        times += mdt.date2num(start)
+        times += md.date2num(start)
 
         return times
 
-    def read(self, data_path, sort=False):
-        """
-        Read the data files specified in the datapath.
+    def read(self, data_path):
+        """ Read the data files specified in the datapath with obspy.
+
+        This method uses the obspy's read method itself. A check for the
+        homogeneity of the seismic traces (same number of samples) is done a
+        the end. If the traces are not of same size, an warning message
+        shows up.
 
         Arguments:
         ----------
-        :datapath (str or list): datapath with a single data file or with
-        UNIX regexp, or a list of files.
+            data_path (str or list): path to the data. Path to a single file
+                (str), to several files using UNIX regexp (str), or a list of
+                files (list). See obspy.read method for more details.
 
-        Keyword arguments:
-        ------------------
+        Return:
+        -------
+            homogeneity (bool): True if the traces are all of the same size.
 
-        :sort (bool): whether or not the different traces are sorted in
-        alphabetic order with respect to the station codes.
         """
 
+        # Waitbar in both cases.
         waitbar = ap.logtable.waitbar('Read seismograms')
 
         # If data_path is a str, then only a single trace or a bunch of
         # seismograms with regexp
-        if type(data_path) is str:
+        if isinstance(data_path, str):
             self += obspy.read(data_path)
             waitbar.progress(1)
 
         # If data_path is a list, read each fils in the list.
-        elif type(data_path) is list:
-            self += obspy.read(data_path[0])
-            for index, path in enumerate(data_path[1:]):
+        elif isinstance(data_path, list):
+            for index, path in enumerate(data_path):
                 self += obspy.read(path)
-                waitbar.progress((index + 2) / len(data_path))
-
-        # Sort if needed
-        if sort is True:
-            self.sort()
+                waitbar.progress((index + 1) / len(data_path))
 
         # Check homogeneity
-        n_samples = [stream.stats.npts for stream in self]
-        homogeneity = len(set(n_samples)) == 1
+        homogeneity = len(set(stream.stats.npts for stream in self)) == 1
         if homogeneity is not True:
-            ValueError(" Error : Traces are not homogeneous.")
+            print(" Warning: Traces are not homogeneous.")
+
+        return homogeneity
 
     def h5read(self, data_path, name='PZ', underscore=True,
                force_start=None):
@@ -165,33 +179,31 @@ class Stream(obspy.core.stream.Stream):
             self += obspy.core.trace.Trace(data=trace, header=stats)
 
     def cut(self, starttime=None, endtime=None, pad=True, fill_value=0):
-        """
-        A wrapper for not defining the UTCDateTime in the main file.
+        """A wrapper to the trim function with string dates or datetimes.
 
-        Keyword arguments:
-        ------------------
+        Arguments:
+        ----------
+            starttime (str or datetime, optional): the starting time. Default
+                to None when the data is not trimed.
 
-        :starttime (str): the starting time.
+            endtime (str or datetime, optional): the ending time. Default
+                to None when the data is not trimed.
 
-        :endtime (str): the starting time.
+            pad (bool, optional): whether the data has to be padded if the
+                starting and ending times are outside the time limits of the
+                times.
 
-        :pad (bool): whether the data has to be padded if the starting and
-        ending times are outside the time limits of the seismic traces
-
-        :fill_value (int, float or str): specify the values to use in order ot
-        fill gaps, or pad the data if PAD kwarg is set to True.
+            fill_value (int, float or str): specify the values to use in order
+                to fill gaps, or pad the data if the pad kwarg is set to True.
         """
 
         # Convert date strings to obspy UTCDateTime
         starttime = obspy.UTCDateTime(starttime)
         endtime = obspy.UTCDateTime(endtime)
 
-        # Trim with
+        # Trim
         self.trim(starttime=starttime, endtime=endtime, pad=pad,
                   fill_value=fill_value)
-
-        # Get the new time vector
-        self.times = self.get_times()
 
     def homogenize(self, sampling_rate=20.0, method='linear',
                    start='2010-01-01', npts=24 * 3600 * 20):
@@ -234,6 +246,19 @@ class Stream(obspy.core.stream.Stream):
             smooth = ap.maths.savitzky_golay(np.abs(trace.data), window, order)
             trace.data = trace.data / (smooth + epsilon)
 
+    def demad(self):
+        """ Normalize traces by Mean Absolute Deviation.
+        """
+
+        # Waitbar initialization
+        waitbar = ap.logtable.waitbar('Remove MAD')
+        n_traces = len(self)
+
+        # Binarize
+        for index, trace in enumerate(self):
+            waitbar.progress((index + 1) / n_traces)
+            trace.data = trace.data / robust.mad(trace.data)
+
     def whiten(self, segment_duration_sec, method='onebit', smooth=11):
         """
         Spectral one-bit normalization of any obspy stream that may
@@ -265,11 +290,112 @@ class Stream(obspy.core.stream.Stream):
         self.cut(pad=True, fill_value=0, starttime=self[0].stats.starttime,
                  endtime=self[0].stats.starttime + duration)
 
+    def show(self, ax=None, scale=0.5, path_figure=None, **kwargs):
+        """ Plot all seismic traces.
+
+        The date axis is automatically defined with matplotlib.dates.
+
+        Arguments:
+        ----------
+
+            ax (matplotlib.pyplot.Axes, optional) the axes for the traces.
+                Default to None, and the axes are created.
+
+            scale (float): scaling factor for trace amplitude.
+
+            path_figure (str, optional): if set, then save the figure to the
+                path. Default to None, then return fig, ax and cax.
+
+            **kwargs (dict): other keyword arguments passed to
+                matplotlib.pyplot.pcolormesh.
+
+        Return:
+        ------
+
+            If the path_figure kwargs is set to None (default), the following
+            objects are returned:
+
+            fig (matplotlib.pyplot.Figure) the figure instance.
+            ax (matplotlib.pyplot.Axes) axes of the spectrogram.
+
+        """
+
+        # Default parameters
+        times = self.get_times()
+        kwargs.setdefault('rasterized', True)
+
+        # Canvas
+        if ax is None:
+            fig, ax = plt.subplots(1, figsize=(7, 6))
+        else:
+            fig = ax.figure
+
+        # Plot traces
+        self.sort()
+        for index, trace in enumerate(self):
+            data = trace.data
+            data[np.isnan(data)] = 0.0
+            data = scale * data / robust.mad(data)
+            ax.plot(times, data + index + 1, **kwargs)
+
+        # Station codes
+        self.stations = [stream.stats.station for stream in self]
+        ax.set_yticks(range(len(self) + 2))
+        ax.set_yticklabels([' '] + self.stations + [' '])
+        ax.set_ylim([0, len(self) + 1])
+        ax.set_ylabel('Station code')
+
+        # Time axis
+        ax.set_xlim(times[[0, -1]])
+        xticks = md.AutoDateLocator()
+        ax.xaxis.set_major_locator(xticks)
+        ax.xaxis.set_major_formatter(md.AutoDateFormatter(xticks))
+
+        # Save
+        if path_figure is not None:
+            fig.savefig(path_figure, dpi=300, bbox_inches='tight')
+        else:
+            return fig, ax
+
     def stft(self, segment_duration_sec, bandwidth=None, overlap=0.5,
              **kwargs):
-        """
-        Obain array spectra (short window Fourier transform) from complex
-        spectrogram function (mlab).
+        """ Perform short-time Fourier transform onto individual traces.
+
+        Arguments:
+        ----------
+
+            segment_duration_sec (float): duration of the time segments
+                analysed with Fourier transform
+
+            bandwidth (tuple or list, optional): frequency limits onto which
+                the spectra could be truncated. Default to None, i.e. all
+                frequencies are kept.
+
+            overlap (float, optional): overlap between time segments. Default
+                to 0.5, meaning that segments are overlapping at 50%.
+
+            **kwargs (dict): other kwargs are passed to the scipy.signal.stft
+                function. Some default kwargs are defined:
+                - fs (float): sampling_rate extracted from self.
+                - nperseg (int): segments length int(segement_duration * fs)
+                - noverlap (int): overlap length int(segment_length * overlap)
+                - nfft (int): length of fft output (nextpow2(segment_lenght))
+                - window (str): window function (default 'hann')
+                - boundary (:obj: `str`): pad signal at boundaries
+
+        Return:
+        -------
+
+            spectra (ndarray): the Fourier spectra of shape
+                (n_stations, n_frequencies, n_times). The frequency axis is
+                truncated if the bandwidth argument is not None.
+
+            frequencies (array): the frequency axis (n_frequencies). The
+                frequency axis is truncated if the bandwidth argument is not
+                None.
+
+            times (array): the starting time of each window.
+
         """
 
         # Short-time Fourier transform arguments
@@ -277,9 +403,7 @@ class Stream(obspy.core.stream.Stream):
         kwargs.setdefault('nperseg', int(segment_duration_sec * kwargs['fs']))
         kwargs.setdefault('noverlap', int(kwargs['nperseg'] * overlap))
         kwargs.setdefault('nfft', int(2**np.ceil(np.log2(kwargs['nperseg']))))
-
-        # Other default STFT keyword arguments
-        kwargs.setdefault('window', 'hanning')
+        kwargs.setdefault('window', 'hann')
         kwargs.setdefault('return_onesided', True)
         kwargs.setdefault('boundary', None)
 
@@ -287,28 +411,27 @@ class Stream(obspy.core.stream.Stream):
         spectra = list()
         waitbar = ap.logtable.waitbar('Spectra')
         n_traces = len(self)
-
         for trace_id, trace in enumerate(self):
-
             frequencies, times, spectrum = stft(trace.data, **kwargs)
             spectra.append(spectrum)
             waitbar.progress((trace_id + 1) / n_traces)
 
-        # Reduces a list of spectra to an array of shape (n_stations,
-        # n_frequencies, n_times)
+        # Reduces a list of spectra to an array
         spectra = np.array(spectra)
+        self.n_frequencies_extended = len(frequencies)
 
         # Extract spectra within bandwidth
+        df = frequencies[1] - frequencies[0]
         if bandwidth is not None:
-            in_band = (frequencies >= 0.9 * bandwidth[0])
-            in_band = in_band & (frequencies <= bandwidth[1])
+            in_band = (frequencies >= bandwidth[0] - 2 * df)
+            in_band = in_band & (frequencies <= bandwidth[1] + 2 * df)
             frequencies = frequencies[in_band]
             spectra = spectra[:, in_band, :]
 
         # Calculate spectral times
         times -= times[0]  # remove center times
         times /= 24 * 3600  # convert into fraction of day
-        times += mdt.date2num(self[0].stats.starttime.datetime)  # + absolute
+        times += md.date2num(self[0].stats.starttime.datetime)  # + absolute
 
         # Set attributes
         self.spectra = spectra
@@ -317,105 +440,102 @@ class Stream(obspy.core.stream.Stream):
 
         return self.spectra, self.frequencies, self.spectral_times
 
-    def bartlett(self, n_average=10):
-        """Averages the spectra amplitude over a set of AVERAGE windows."""
-
-        # Reshape
-        n_traces, n_frequencies, n_times = self.spectra.shape
-        n_times = n_times // n_average
-        self.spectra = self.spectra[..., :n_times * n_average]
-        self.spectral_times = self.spectral_times[::n_average]
-        self.spectra = self.spectra.reshape(
-            n_traces, n_frequencies, n_times, n_average)
-        self.spectra = np.abs(self.spectra.mean(axis=-1))
-
-    def show(self, code=None, ax=None, figure_file_name=None, scale=10,
-             **kwargs):
-
-        # Default parameters
-        times = self.get_times()
-        self.sort()
-        kwargs.setdefault('rasterized', True)
-        kwargs.setdefault('lw', 0.2)
-        kwargs.setdefault('c', 'C0')
-
-        # Canvas
-        if ax is None:
-            fig, ax = plt.subplots(1, figsize=(8, 6))
-        else:
-            fig = ax.figure
-
-        # Show all traces if code is None
-        if code is None:
-
-            # Plot traces
-            for index, trace in enumerate(self):
-                trace.data[np.isnan(trace.data)] = 0.0
-                trace.data = trace.data / (scale * trace.data.std() + 1e-4)
-                ax.plot(times, trace.data + index + 1, **kwargs)
-
-            # Cosmetics
-            ax.set_yticks(range(len(self) + 2))
-            self.stations = [stream.stats.station for stream in self]
-            ax.set_yticklabels([' '] + self.stations + [' '])
-            ax.set_ylim([0, len(self) + 1])
-            ax.set_ylabel('Station code')
-
-        else:
-
-            # Get trace index
-            stations = [stream.stats.station for stream in self]
-            index = stations.index(code)
-
-            # Show trace at given index
-            trace = self[index]
-            trace.data[np.isnan(trace.data)] = 0.0
-            trace.data = trace.data / (scale * trace.data.std() + 1e-4)
-            ax.plot(times, trace.data, **kwargs)
-            ax.set_ylim([-1, 1])
-
-        # Cosmetics
-        time_step = times[1] - times[0]
-        ax.set_xlim(times[0], times[-1] + time_step)
-
-        # Save
-        if figure_file_name is not None:
-            fig.savefig(figure_file_name, dpi=300, bbox_inches='tight')
-        else:
-            return fig, ax
-
-    def spectrogram(self, code=None, ax=None, cax=None, figure_file_name=None,
+    def spectrogram(self, code=None, ax=None, cax=None, path_figure=None,
                     **kwargs):
+        """ Pcolormesh the spectrogram of a single seismic trace.
 
-        # Generate canvas if no axes are given
+        The spectrogram (modulus of the short-time Fourier transform) is
+        extracted from the complex spectrogram previously calculated from stft.
+
+        The spectrogram is represented in log-scale amplitude normalized by
+        the maximal amplitude (dB re max).
+
+        The date axis is automatically defined with matplotlib.dates.
+
+        Arguments:
+        ----------
+
+            code (str, optional): the station code from which the spectrogram
+                is desired. Default to None. If code is None, then the first
+                spectrogram is plotted.
+
+            ax (matplotlib.pyplot.Axes, optional) the axes for the spectrogram.
+                Default to None, and some axes are created.
+
+            cax (matplotlib.pyplot.Axes, optional) the axes for the colorbar.
+                Default to None, and the axes are created. These axes should be
+                given if ax is not None.
+
+            path_figure (str, optional): if set, then save the figure to the
+                path. Default to None, then return fig, ax and cax.
+
+            **kwargs (dict): other keyword arguments passed to
+                matplotlib.pyplot.pcolormesh.
+
+        Return:
+        ------
+
+            If the path_figure kwargs is set to None (default), the following
+            objects are returned:
+
+            fig (matplotlib.pyplot.Figure) the figure instance.
+            ax (matplotlib.pyplot.Axes) axes of the spectrogram.
+            cax (matplotlib.pyplot.Axes) axes of the colorbar.
+
+        """
+
+        # Check if the spectra have been calculated.
+        if not hasattr(self, 'spectra'):
+            errormsg = 'You should perform stft() first. Exiting.'
+            ap.logtable.row('ERROR [spectrogram]', errormsg)
+            exit()
+
+        # Create canvas if no axes are given
         if ax is None:
             gs = dict(width_ratios=[50, 1])
-            fig, ax = plt.subplots(1, 2, figsize=(8, 3), gridspec_kw=gs)
-            ax, cax = ax.ravel()
+            fig, (ax, cax) = plt.subplots(1, 2, figsize=(7, 3), gridspec_kw=gs)
+
+        # Else extract figure parent from ax
         else:
             fig = ax.figure
 
-        # Get index from code
-        stations = [stream.stats.station for stream in self]
-        station_index = stations.index(code)
+        # Get station index from code
+        if code is None:
+            spectrum = self.spectra[0, :, :]
+        else:
+            stations = [stream.stats.station for stream in self]
+            station_index = [i for i, s in enumerate(stations) if code in s]
+            spectrum = self.spectra[station_index, :, :]
+        spectrum = np.squeeze(spectrum)
+
+        # Spectrogram
+        spectrum = np.log10(np.abs(spectrum) / np.abs(spectrum).max())
+
+        # Times
+        times = self.spectral_times
+        times = np.hstack((times, self.get_times()[-1]))
 
         # Image
         kwargs.setdefault('rasterized', True)
-        kwargs.setdefault('cmap', 'RdYlBu_r')
-        spectrum = np.abs(self.spectra[station_index, :, :])
-        spectrum /= np.max(spectrum)
-        spectrum = np.log10(spectrum)
-        times = self.spectral_times
-        extended_times = np.hstack((times, times[-1] + (times[1] - times[0])))
-        img = ax.pcolormesh(extended_times, self.frequencies, spectrum,
-                            **kwargs)
+        img = ax.pcolormesh(times, self.frequencies, spectrum, **kwargs)
 
         # Colorbar
         plt.colorbar(img, cax=cax)
-        cax.set_ylabel('Spectral amplitude (dBA)')
+        cax.set_ylabel('Spectral amplitude (dB re max)')
 
-        # Save
-        if figure_file_name is not None:
-            fig.savefig(figure_file_name, dpi=300, bbox_inches='tight')
+        # Date ticks
+        ax.set_xlim(self.get_times()[[0, -1]])
+        xticks = md.AutoDateLocator()
+        ax.xaxis.set_major_locator(xticks)
+        ax.xaxis.set_major_formatter(md.AutoDateFormatter(xticks))
+
+        # Frequencies
+        ax.set_yscale('log')
+        ax.set_ylabel('Frequencies (Hz)')
+        ax.set_ylim(self.frequencies[[0, -1]])
+
+        # Save or return
+        if path_figure is not None:
+            fig.savefig(path_figure, dpi=300, bbox_inches='tight')
         else:
-            return fig, ax
+            return fig, ax, cax
