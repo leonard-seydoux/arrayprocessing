@@ -5,11 +5,12 @@
 
 import arrayprocessing as ap
 import numpy as np
-import _pickle as pickle
+import pickle
 import matplotlib.pyplot as plt
+from matplotlib import dates as md
 
 from numpy.linalg import eigvalsh, eig, svd
-from arrayprocessing.maths import xcov, xcov_std
+from arrayprocessing.maths import xcov
 
 
 class CovarianceMatrix(np.ndarray):
@@ -112,29 +113,29 @@ class RealCovariance():
             with open(pickle_file, 'rb') as input_file:
                 self.__dict__.update(pickle.load(input_file))
 
-        # If pickle_file is None, get the stream data.
-
+        # If try to read from cpp code
         elif cpp is not None:
-
             times, frequencies, coherence = ap.read_spectral_width(
                 files=cpp, date_start=start)
             self.times = times
             self.frequencies = frequencies
             self.coherence = coherence.T
 
+        # Otherwise, get stream
         else:
-
             self.stream = stream
             self.sampling_rate = self.stream[0].stats.sampling_rate
             self.start = self.stream[0].stats.starttime
 
-    def __add__(self, other):
+    def __add__(self, other, eigenvectors=None):
         """
         Possibility to stack several computed coherence objects over time.
         """
 
-        covariance_times = (self.times, other.times)
-        self.times = np.concatenate(covariance_times)[:-1]
+        other_time = np.hstack((other.times, other.time_end))
+        covariance_times = (self.times, other_time)
+        self.times = np.concatenate(covariance_times)
+        self.time_end = other.time_end
 
         coherence = (self.coherence.T, other.coherence.T)
         self.coherence = np.hstack(coherence).T
@@ -145,45 +146,70 @@ class RealCovariance():
 
         return self
 
-    def calculate(self, average=20, overlap=None, standardize=False):
-        """
-        Calculation of the array covariance matrix from the array data vectors
-        stored in the spectra matrix (should be n_traces x n_windows x n_freq).
+    def calculate(self, average, overlap=0.5, standardize=False):
+        """ Calculate covariance matrix from the stream.spectra.
+
+        Attributes:
+        -----------
+            covariance (CovarianceMatrix, dtype=complex)
+
+        Arguments:
+        ----------
+            average (int): number of averaging spectral windows.
+
+            overlap (float): overlaping ratio between consecutive spectral
+                windows. Default to 0.5.
+
+            standardize (bool): use of standart deviation normalization.
+                Default to False (no normalization applied).
+
         """
 
         # Parametrization
-        overlap = average // 2 if overlap is None else overlap
-        ratio = average // overlap
+        overlap = int(average * overlap)
+
+        # Reshape spectra in order to (n_stations, n_times, n_frequencies)
         self.stream.spectra = self.stream.spectra.transpose([0, 2, 1])
         n_traces, n_windows, n_frequencies = self.stream.spectra.shape
-        n_average = ratio * n_windows // average - (ratio - 1)
-        n_times = n_average + 1
+
+        # Times
+        times = self.stream.spectral_times[:-average:overlap]
+        n_average = len(times)
 
         # Initialization
-        covariance_shape = (n_average, n_traces, n_traces, n_frequencies)
-        ci = complex
-        self.covariance = CovarianceMatrix(shape=covariance_shape, dtype=ci)
+        cov_shape = (n_average, n_traces, n_traces, n_frequencies)
+        self.covariance = CovarianceMatrix(shape=cov_shape, dtype=complex)
         waitbar = ap.logtable.waitbar('Covariance')
 
-        xc = xcov if standardize is False else xcov_std
+        # Standardize
+        if standardize is True:
+            spectra = self.stream.spectra
+            for fid in range(n_frequencies):
+                for sid in range(n_traces):
+
+                    # Demean
+                    spectra[sid, :, fid] -= np.mean(spectra[sid, :, fid])
+
+                    # Devar
+                    var = np.var(spectra[sid, :, fid].real) +\
+                        np.var(spectra[sid, :, fid].imag)
+                    spectra[sid, :, fid] /= var ** (1 / 4)
+            self.stream.spectra = spectra
 
         # Compute
-        for wid in range(n_average):
-            self.covariance[wid] = xc(
-                wid, self.stream.spectra, overlap, average)
-            waitbar.progress(wid / (n_average - 1))
+        for t in range(n_average):
+            self.covariance[t] = xcov(t, self.stream.spectra, overlap, average)
+            waitbar.progress(t / (n_average - 1))
 
         # Get times
-        times = self.stream.spectral_times[::overlap]
-        times = times[:n_times]
-        dtimes = times[1] - times[0]
-        times = np.insert(times, len(times), times[-1] + (ratio - 1) * dtimes)
         self.times = times
+        self.time_end = self.stream.get_times()[-1]
         self.frequencies = self.stream.frequencies
 
     def calculate_spectralwidth(self):
-        """
-        Coherence extracted from a set of covariance matrices (n_times, n_freq)
+        """ Spectral width of the covariance matrices (n_times, n_frequencies).
+
+        Creates an attribute coherence.
         """
         # Initialization
         n_windows, _, _, n_frequencies = self.covariance.shape
@@ -231,10 +257,23 @@ class RealCovariance():
         self.eigenvectors = np.concatenate(
             (self.eigenvectors, self.eigenvectors[:, None, -1]), axis=1)
 
-    def save(self, filename='coherence.pck', coherence=True, covariance=False,
+    def save(self, path='coherence.pkl', coherence=True, covariance=False,
              spectra=False, stream=False, eigenvectors=False):
-        """
-        Save the covariance object into pickle file.
+        """Save the covariance object into pickle file.
+
+        Arguments:
+        ----------
+
+            path (str, optional) Path to the pickle file.
+                Default to 'coherence.pkl'.
+
+            coherence (bool, optional) Save the coherence. Default to True.
+            covariance (bool, optional) Save the covariance. Default to False.
+            spectra (bool, optional) Save the spectra. Default to False.
+            stream (bool, optional) Save the stream. Default to False.
+            eigenvectors (bool, optional) Save the eigenvectors. Default False.
+
+
         """
 
         self.covariance = self.covariance if covariance is True else None
@@ -243,10 +282,11 @@ class RealCovariance():
         self.stream = self.stream if stream is True else None
         self.spectra = self.spectra if spectra is True else None
 
-        ap.logtable.row('Save as', filename)
-        pickle_protocol = 2
-        with open(filename, 'wb') as outfile:
-            pickle.dump(self.__dict__, outfile, pickle_protocol)
+        ap.logtable.row('Save as', path)
+        with open(path, 'wb') as outfile:
+            pickle.dump(self.__dict__, outfile, pickle.HIGHEST_PROTOCOL)
+
+        pass
 
     def get_coherence(self):
         return self.times, self.frequencies, self.coherence.T
@@ -258,24 +298,59 @@ class RealCovariance():
         return self.times, self.frequencies, self.eigenvectors
 
     def show_coherence(self, ax=None, cax=None, path_figure=None, **kwargs):
+        """ Calculate covariance matrix from the stream.spectra.
 
+        Arguments:
+        ----------
+
+            ax (matplotlib.pyplot.Axes, optional) the axes for the coherence.
+                Default to None, and some axes are created.
+
+            cax (matplotlib.pyplot.Axes, optional) the axes for the colorbar.
+                Default to None, and the axes are created. These axes should be
+                given if ax is not None.
+
+            path_figure (str, optional): if set, then save the figure to the
+                path. Default to None, then return fig, ax and cax.
+
+            **kwargs (dict): other keyword arguments passed to
+                matplotlib.pyplot.pcolormesh.
+
+
+        Return:
+        ------
+
+            If the path_figure kwargs is set to None (default), the following
+            objects are returned:
+
+            fig (matplotlib.pyplot.Figure) the figure instance.
+            ax (matplotlib.pyplot.Axes) axes of the spectrogram.
+            cax (matplotlib.pyplot.Axes) axes of the colorbar.
+        """
+
+        # If axes are not given
         if ax is None:
-
-            # Create axis
             gs = dict(width_ratios=[50, 1], wspace=0.1)
-            fig, (ax, cax) = plt.subplots(1, 2, figsize=(8, 3), gridspec_kw=gs)
-
+            fig, (ax, cax) = plt.subplots(1, 2, figsize=(7, 3), gridspec_kw=gs)
         else:
             fig = ax.figure
 
         # Default options
-        kwargs.setdefault('cmap', 'RdYlBu')
         kwargs.setdefault('rasterized', True)
+        time = self.times
+        time = np.hstack((time, self.time_end))
+        img = ax.pcolormesh(time, self.frequencies, self.coherence.T, **kwargs)
 
-        # Image
-        img = ax.pcolormesh(self.times, self.frequencies, self.coherence.T,
-                            **kwargs)
+        # Time limits
+        ax.set_xlim(self.times[0], self.time_end)
+        xticks = md.AutoDateLocator()
+        ax.xaxis.set_major_locator(xticks)
+        ax.xaxis.set_major_formatter(md.AutoDateFormatter(xticks))
+
+        # Frequency limits
+        ax.set_ylim(self.frequencies[[0, -1]])
         ax.set_yscale('log')
+        ax.set_ylabel('Frequency (Hz)')
 
         # Colorbar
         plt.colorbar(img, cax=cax)
@@ -285,4 +360,4 @@ class RealCovariance():
         if path_figure is not None:
             fig.savefig(path_figure, dpi=300, bbox_inches='tight')
         else:
-            return fig, (ax, cax)
+            return fig, ax, cax

@@ -9,7 +9,6 @@ import copy
 from obspy.signal.tf_misfit import cwt
 from numba import jit, complex128, int32
 from math import factorial
-from numpy.linalg import eigvalsh, eig
 
 
 def phase(data, **kwargs):
@@ -64,24 +63,7 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
 
 
 @jit(complex128(int32, complex128, int32, int32))
-def xcov(wid, spectra, overlap, average):
-    """
-    Calculation of the array covariance matrix from the array data vectors
-    stored in the spectra matrix (should be n_traces x n_windows x n_freq),
-    over one set of averaged windows.
-    """
-    n_traces, n_windows, n_frequencies = spectra.shape
-    beg = overlap * wid
-    end = beg + average
-    X = spectra[:, None, beg, :] * np.conj(spectra[:, beg, :])
-    for swid in range(1, average - 1):
-        X += np.conj(spectra[:, None, beg + swid, :]) * \
-            spectra[:, beg + swid, :]
-    return X
-
-
-@jit(complex128(int32, complex128, int32, int32))
-def xcov_std(wid, spectra_full, overlap, average):
+def xcov(wid, spectra_full, overlap, average):
     """
     Calculation of the array covariance matrix from the array data vectors
     stored in the spectra matrix (should be n_traces x n_windows x n_freq),
@@ -91,13 +73,6 @@ def xcov_std(wid, spectra_full, overlap, average):
     beg = overlap * wid
     end = beg + average
     spectra = copy.deepcopy(spectra_full[:, beg:end, :])
-
-    for fid in range(n_frequencies):
-        for sid in range(n_traces):
-            spectra[sid, :, fid] -= np.mean(spectra[sid, :, fid])
-            var = np.var(spectra[sid, :, fid].real) +\
-                np.var(spectra[sid, :, fid].imag)
-            spectra[sid, :, fid] /= var ** (1/4)
 
     X = spectra[:, None, 0, :] * np.conj(spectra[:, 0, :])
     for swid in range(1, average - 1):
@@ -111,7 +86,7 @@ def wavelet(self, bw_ratio, f_min, f_max):
     """
     spectra = list()
     for st in self.stream:
-        print(st, flush=True)
+        int(st, flush=True)
         spectra.append(cwt(st.data, st.stats.delta, 20, f_min, f_max).T)
     self.spectra = np.array(spectra)
 
