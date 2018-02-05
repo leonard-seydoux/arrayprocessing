@@ -113,7 +113,7 @@ class Stream(obspy.core.stream.Stream):
         return homogeneity
 
     def h5read(self, data_path, name='PZ', underscore=True,
-               force_start=None):
+               force_start=None, stations=None):
         """
         Read the data files specified in the datapath.
 
@@ -136,7 +136,10 @@ class Stream(obspy.core.stream.Stream):
         traces = h5py.File(data_path, 'r')
         starttime = np.array(traces[metadata]['t0_UNIX_timestamp'])
         sampling_rate = np.array(traces[metadata]['fe'])
-        station_codes = [key for key in traces[name].keys()]
+        if stations is None:
+            station_codes = [k for k in traces[name].keys()]
+        else:
+            station_codes = [k for k in traces[name].keys() if k in stations]
 
         # Sizes
         n_stations = len(station_codes)
@@ -332,11 +335,13 @@ class Stream(obspy.core.stream.Stream):
 
         # Plot traces
         self.sort()
-        for index, trace in enumerate(self):
-            data = trace.data
-            data[np.isnan(data)] = 0.0
-            data = scale * data / robust.mad(data)
-            ax.plot(times, data + index + 1, **kwargs)
+        traces = np.array([s.data for s in self])
+        traces /= traces.max()
+        traces /= 1.2 * robust.mad(traces).max()
+        for index, trace in enumerate(traces):
+            trace[np.isnan(trace)] = 0.0
+            trace *= scale
+            ax.plot(times, trace + index + 1, **kwargs)
 
         # Station codes
         self.stations = [stream.stats.station for stream in self]
