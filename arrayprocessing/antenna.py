@@ -348,12 +348,12 @@ class Map(geoaxes.GeoAxes):
 
         degree = u'\N{DEGREE SIGN}'
         dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
-        lonlabels = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lon]
-        latlabels = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lat]
-        lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lonlabels]
-        latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in latlabels]
-        self.set_xticklabels(lonlabels)
-        self.set_yticklabels(latlabels)
+        lons = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lon]
+        lats = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lat]
+        lons = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
+        lats = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
+        self.set_xticklabels(lons)
+        self.set_yticklabels(lats)
         self.set_extent(outer)
 
     def ticks(self, n_lon=7, n_lat=5):
@@ -369,7 +369,7 @@ class Map(geoaxes.GeoAxes):
 
         degree = u'\N{DEGREE SIGN}'
         dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
-        lonlabels = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lon]
+        lons = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lon]
         latlabels = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lat]
         lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lonlabels]
         latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in latlabels]
