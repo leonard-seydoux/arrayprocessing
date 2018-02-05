@@ -144,6 +144,11 @@ class RealCovariance():
             self.eigenvectors = np.concatenate((
                 self.eigenvectors, other.eigenvectors), axis=1)
 
+        if self.covariance is not None:
+            self.covariance = np.concatenate((
+                self.covariance, other.covariance), axis=0).view(
+                CovarianceMatrix)
+
         return self
 
     def calculate(self, average, overlap=0.5, standardize=False):
