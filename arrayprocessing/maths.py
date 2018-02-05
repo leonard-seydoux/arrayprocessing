@@ -62,7 +62,7 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
     return np.convolve(m[::-1], y, mode='valid')
 
 
-@jit(complex128(int32, complex128, int32, int32), parallel=True)
+@jit(complex128(int32, complex128, int32, int32))
 def xcov(wid, spectra_full, overlap, average):
     """
     Calculation of the array covariance matrix from the array data vectors
