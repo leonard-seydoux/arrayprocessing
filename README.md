@@ -1,6 +1,6 @@
 # Array processing
 
-Analaysing seismic data with array processing tools.
+Analysing seismic data with array processing tools.
 
 The package is divided into modules listed here and shown in the scheme below:
 * __data.py__ : get and pre-process seismic data
@@ -10,6 +10,8 @@ The package is divided into modules listed here and shown in the scheme below:
 * __synthetic.py__ : create array covariance matrixes from synthetic cases
 * __maths.py__ : defines some basics mathematical functions used in the package
 * __logtable.py__ : handle the terminal display when running the package
+
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap.png)
 
 ## data.py
 
@@ -96,17 +98,23 @@ stream = ap.read('/path/to/traces/*.sac')
 
 spectrogram, frequencies, times = stream.stft(segment_duration_sec=16, bandwidth=[3, 10])
 ```
-
 ### Show speectrograms
 
 You can show the spectrograms with the `spectrogram` method. Doc will come soon.
 
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_data.png)
+
 ## covariance.py
 
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_covariance.png)
+
 ## correlation.py
+
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_correlation.png)
 
 ## antenna.py
 
 ## synthetic.py
 
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_synthetic.png)
 
