@@ -19,7 +19,7 @@ def planewave(antenna, frequency, slowness, azimuth):
     wavenumber = 2 * np.pi * frequency * slowness
     scalar_product = np.sin(azimuth) * x + np.cos(azimuth) * y
     wavefield = np.exp(-1j * wavenumber * scalar_product)
-    covariance = xouter(planewave)
+    covariance = xouter(wavefield)
     return covariance.view(ap.CovarianceMatrix).astype(complex)
 
 
