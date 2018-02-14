@@ -38,7 +38,7 @@ def volume_noise(antenna, frequency, slowness):
     distances = antenna.get_distances()
     wavenumber = 2 * np.pi * frequency * slowness
     covariance = np.sinc(wavenumber * distances)
-    return covariance.view(ap.CovarianceMatrix())
+    return covariance.view(ap.CovarianceMatrix).astype(complex)
 
 
 def estimated_surface_noise(antenna, frequency, slowness, n_sources=200,
