@@ -199,6 +199,7 @@ class RealCovariance():
                     var = np.var(spectra[sid, :, fid].real) +\
                         np.var(spectra[sid, :, fid].imag)
                     spectra[sid, :, fid] /= var ** (1 / 4)
+
             self.stream.spectra = spectra
 
         # Compute

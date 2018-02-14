@@ -370,9 +370,9 @@ class Map(geoaxes.GeoAxes):
         degree = u'\N{DEGREE SIGN}'
         dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
         lons = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lon]
-        latlabels = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lat]
-        lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lonlabels]
-        latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in latlabels]
+        lats = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lat]
+        lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
+        latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
         self.set_xticklabels(lonlabels)
         self.set_yticklabels(latlabels)
 

@@ -113,7 +113,7 @@ class Stream(obspy.core.stream.Stream):
         return homogeneity
 
     def h5read(self, data_path, name='PZ', underscore=True,
-               force_start=None, stations=None):
+               force_start=None, stations=None, channel='Z'):
         """
         Read the data files specified in the datapath.
 
@@ -157,7 +157,7 @@ class Stream(obspy.core.stream.Stream):
         waitbar = ap.logtable.waitbar('Read data')
         for station, station_code in enumerate(station_codes):
             waitbar.progress((station + 1) / n_stations)
-            data = traces[name][station_code]['Z'][:]
+            data = traces[name][station_code][channel][:]
             stats.npts = len(data)
             stats.station = station_code.split('.')[0]
             self += obspy.core.trace.Trace(data=data, header=stats)
@@ -260,7 +260,11 @@ class Stream(obspy.core.stream.Stream):
         # Binarize
         for index, trace in enumerate(self):
             waitbar.progress((index + 1) / n_traces)
-            trace.data = trace.data / robust.mad(trace.data)
+            mad = robust.mad(trace.data)
+            if mad > 0:
+                trace.data /= mad
+            else:
+                trace.data /= (mad + 1e-5)
 
     def whiten(self, segment_duration_sec, method='onebit', smooth=11):
         """
@@ -287,6 +291,31 @@ class Stream(obspy.core.stream.Stream):
             _, _, data_fft = stft(data, nperseg=fft_size)
             data_fft = whiten_method(data_fft, smooth=smooth)
             _, data = istft(data_fft, nperseg=fft_size)
+            trace.data = data
+
+        # Trim
+        self.cut(pad=True, fill_value=0, starttime=self[0].stats.starttime,
+                 endtime=self[0].stats.starttime + duration)
+
+    def standardize(self, segment_duration_sec):
+        """
+        Spectral standardization.
+        """
+
+        # Initialize for waitbar
+        waitbar = ap.logtable.waitbar('Standardize')
+        n_traces = len(self)
+        fft_size = int(segment_duration_sec * self[0].stats.sampling_rate)
+        duration = self[0].times()[-1]
+
+        # Whiten
+        for index, trace in enumerate(self):
+            waitbar.progress((index + 1) / n_traces)
+            data = trace.data
+            _, _, datafft = stft(data, nperseg=fft_size)
+            var = np.var(datafft.real, axis=-1) + np.var(datafft.imag, axis=-1)
+            datafft /= var[:, None] ** (1 / 2)
+            _, data = istft(datafft, nperseg=fft_size)
             trace.data = data
 
         # Trim
@@ -337,7 +366,9 @@ class Stream(obspy.core.stream.Stream):
         self.sort()
         traces = np.array([s.data for s in self])
         traces /= traces.max()
-        traces /= 1.2 * robust.mad(traces).max()
+        if robust.mad(traces).max() > 0:
+            traces /= 1.2 * robust.mad(traces).max()
+
         for index, trace in enumerate(traces):
             trace[np.isnan(trace)] = 0.0
             trace *= scale
