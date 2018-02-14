@@ -95,3 +95,5 @@ You can show the spectrograms with the `spectrogram` method. Doc will come soon.
 
 - Create a `calculate_coherence()` method with a kwarg `shanon_index` or `spectral_width`
 - Enrich the `get_eigenvectors()` method with datetime selection and frequency range selection
+- Create `self.z` set to 0 when antenna is 2D, otherwise set to th values available in txt or csv file.
+- Add a warning message in synthetic.spherical if none of the `xyz` or `llz` kwargs is set. Clarify `spheri al` function.
