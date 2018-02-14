@@ -105,13 +105,6 @@ class Stream(obspy.core.stream.Stream):
                 self += obspy.read(path)
                 waitbar.progress((index + 1) / len(data_path))
 
-        # Check homogeneity
-        homogeneity = len(set(stream.stats.npts for stream in self)) == 1
-        if homogeneity is not True:
-            print(" Warning: Traces are not homogeneous.")
-
-        return homogeneity
-
     def h5read(self, data_path, name='PZ', underscore=True,
                force_start=None, stations=None, channel='Z'):
         """

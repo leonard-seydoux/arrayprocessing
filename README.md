@@ -1,19 +1,8 @@
 # Array processing
 
-Analysing seismic data with array processing tools.
+Analaysing seismic data with array processing tools.
 
-The package is divided into modules listed here and shown in the scheme below:
-* __data.py__ : get and pre-process seismic data
-* __covariance__ : calculate the array covariance matrix
-* __correlation__ : calculate the array cross-correlation matrix (inverse Fourier transform of the array covariance matrix)
-* __antenna.py__ : deal with the array characteristics
-* __synthetic.py__ : create array covariance matrixes from synthetic cases
-* __maths.py__ : defines some basics mathematical functions used in the package
-* __logtable.py__ : handle the terminal display when running the package
-
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap.png)
-
-## data.py
+## Get and pre-process seismic data
 
 ### Read
 
@@ -61,7 +50,6 @@ import arrayprocessing as ap
 stream = ap.read('/path/to/traces/*.sac')
 stream.binarize()
 ```
-
 #### Whiten each trace in the frequency domain
 
 Divides each trace spectrum with its amplitude. if the `method` kwarg is set to `onebit`, no smoothing is applied to the amplitude. Otherwise, the amplitude is smoothed with the Savitzky-Golay algorithm, with a window of length `smooth` and a order 1.
@@ -77,7 +65,7 @@ stream.whiten(method='smooth, smooth=11)
 
 You can use the methods provided by obspy in order to show the data. Also, a `show` method is defined, currently under tests.
 
-### Calculate spectrograms
+## Calculate spectrograms
 
 The spectrograms are calculated with the short-time Fourier transform function provided by Scipy (`scipy.stft`). This function is computationally efficient. The parameters are `segment_duration_sec` which defines the duration of the window in seconds onto which the spectra are calculated. The `bandwidth` kwarg is usedful to cut the spectra within a frequency band (in Hz), and therefore to reduce the memory usage.
 
@@ -98,25 +86,12 @@ stream = ap.read('/path/to/traces/*.sac')
 
 spectrogram, frequencies, times = stream.stft(segment_duration_sec=16, bandwidth=[3, 10])
 ```
-### Show spectrograms
+
+## Show speectrograms
 
 You can show the spectrograms with the `spectrogram` method. Doc will come soon.
 
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_data.png)
+# To-do list
 
-## covariance.py
-
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_covariance.png)
-
-## correlation.py
-
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_correlation.png)
-
-## antenna.py
-
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_antenna.png)
-
-## synthetic.py
-
-![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_synthetic.png)
-
+- Create a `calculate_coherence()` method with a kwarg `shanon_index` or `spectral_width`
+- Enrich the `get_eigenvectors()` method with datetime selection and frequency range selection
