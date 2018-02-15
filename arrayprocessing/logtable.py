@@ -12,7 +12,7 @@ char_line = '-'
 char_wait = '|'
 
 
-def line():
+def line(flush=True):
     """
     Return a separating line
     """
@@ -20,11 +20,14 @@ def line():
     str_line = char_corner + char_line * column_width[0] + char_corner
     str_line += char_line * column_width[1] + char_corner
 
-    print(str_line)
-    pass
+    if flush is True:
+        print(str_line)
+        pass
+    else:
+        return str_line + '\n'
 
 
-def row(left_value, right_value):
+def row(left_value, right_value, flush=True):
     """
     Returns a table row with left. and right values in corresponding columns.
 
@@ -50,11 +53,14 @@ def row(left_value, right_value):
     str_row = left_value.ljust(column_width[0]) + ' '
     str_row += right_value.ljust(column_width[1]) + ' ' + char_vline
 
-    print(str_row)
-    pass
+    if flush is True:
+        print(str_row)
+        pass
+    else:
+        return str_row + '\n'
 
 
-def full_row(value):
+def full_row(value, flush=True):
     """
     Returns a table row with left. and right values in corresponding columns.
 
@@ -69,8 +75,11 @@ def full_row(value):
     value = value[:full_width - 3] + (value[full_width - 3:] and '...')
     str_row = char_vline + ' ' + value.ljust(full_width) + ' ' + char_vline
 
-    print(str_row)
-    pass
+    if flush is True:
+        print(str_row)
+        pass
+    else:
+        return str_row + '\n'
 
 
 class waitbar():
