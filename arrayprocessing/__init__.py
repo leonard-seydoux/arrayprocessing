@@ -13,6 +13,3 @@ from arrayprocessing.antenna import Antenna, Map
 from arrayprocessing._beam import Beam
 
 from arrayprocessing import synthetic
-
-# Intialization
-logtable.line()
