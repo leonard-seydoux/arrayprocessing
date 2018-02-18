@@ -110,13 +110,13 @@ class Stream(obspy.core.stream.Stream):
         """
         Read the data files specified in the datapath.
 
-        Arguments:
-        ----------
+        Arguments
+        ---------
         :datapath (str or list): datapath with a single data file or with
         UNIX regexp, or a list of files.
 
-        Keyword arguments:
-        ------------------
+        Keyword arguments
+        -----------------
 
         :sort (bool): whether or not the different traces are sorted in
         alphabetic order with respect to the station codes.
