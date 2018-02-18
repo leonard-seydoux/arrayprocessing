@@ -9,7 +9,7 @@ from arrayprocessing.data import Stream, read, h5read
 from arrayprocessing._reader import read_spectral_width
 from arrayprocessing.covariance import CovarianceMatrix, RealCovariance
 from arrayprocessing.correlation import CorrelationMatrix, correlation
-from arrayprocessing.antenna import Antenna, Map
+from arrayprocessing.antenna import Antenna
+from arrayprocessing.mapper import Map
 from arrayprocessing._beam import Beam
-
 from arrayprocessing import synthetic
