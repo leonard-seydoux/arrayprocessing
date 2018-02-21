@@ -191,6 +191,9 @@ class Antenna():
         # Define very useful upper triangular indexes
         self.triu = np.triu_indices(self.dim, k=1)
 
+        # Barycenter
+        self.barycenter = self.lon.mean(), self.lat.mean()
+
         pass
 
     def get_distances(self, triangular=False):
@@ -217,10 +220,43 @@ class Antenna():
         distances = (self.x - self.x[:, None]) ** 2 + \
             (self.y - self.y[:, None]) ** 2 +\
             (self.z - self.z[:, None]) ** 2
+
+        distances = np.sqrt(distances)
+
         if triangular is True:
             return distances[self.triu]
         else:
             return distances
+
+    def get_distances_from(self, lon, lat, z=None):
+        """ Distances between each array element and a source.
+
+        Args
+        ----
+            lon (float): a longitude
+            lat (float): a latitude
+            z (float, option): a depth in km. Default to None (epicentral).
+
+        Return
+        ------
+            distances (array): distance between each array element and the
+                given position
+
+        """
+
+        # Turn location to x and y
+        lon_0 = self.lon.mean()
+        lat_0 = self.lat.mean()
+        x_src, y_src = geo2xy(lon, lat, reference=(lon_0, lat_0))
+
+        # Return distance
+        if z is None:
+            distances = (self.x - x_src) ** 2 + (self.y - y_src) ** 2
+            return np.sqrt(distances)
+        else:
+            distances = (self.x - x_src) ** 2 + (self.y - y_src) ** 2 +\
+                (self.y - z)
+            return np.sqrt(distances)
 
     def get_xyz(self):
         """ Get stations coordinates in km.
@@ -379,6 +415,7 @@ class Antenna():
         selected.lon = selected.lon[indexes]
         selected.lat = selected.lat[indexes]
         selected.x, selected.y = selected.x[indexes], selected.y[indexes]
+        selected.z = selected.z[indexes]
         selected.dim = len(selected.x)
         selected.shape = (selected.dim, selected.dim)
         return selected
