@@ -226,9 +226,13 @@ class Stream(obspy.core.stream.Stream):
             waitbar.progress((index + 1) / n_traces)
             trace.data = trace.data / (np.abs(trace.data) + epsilon)
 
-    def stationarize(self, window=11, order=1, epsilon=1e-10):
-        """
-        Trace stationarization with smoothing time enveloppe.
+    def stationarize(self, length=11, order=1, epsilon=1e-10):
+        """ Trace stationarization with smoothing time enveloppe.
+
+        Args
+        ----
+            length (int): length of the smoothing window.
+
         """
 
         # Waitbar initialization
@@ -239,7 +243,7 @@ class Stream(obspy.core.stream.Stream):
         # Binarize
         for index, trace in enumerate(self):
             waitbar.progress((index + 1) / n_traces)
-            smooth = ap.maths.savitzky_golay(np.abs(trace.data), window, order)
+            smooth = ap.maths.savitzky_golay(np.abs(trace.data), length, order)
             trace.data = trace.data / (smooth + epsilon)
 
     def demad(self):
@@ -358,7 +362,7 @@ class Stream(obspy.core.stream.Stream):
         # Plot traces
         self.sort()
         traces = np.array([s.data for s in self])
-        traces /= traces.max()
+        traces = traces / traces.max()
         if robust.mad(traces).max() > 0:
             traces /= 1.2 * robust.mad(traces).max()
 
