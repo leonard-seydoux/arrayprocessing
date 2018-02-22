@@ -29,6 +29,82 @@ from cartopy.feature import NaturalEarthFeature as nef
 from cartopy.crs import TransverseMercator
 
 
+import math
+
+
+def dd2dms(angle, sec=False):
+    """ Decimal degrees to degrees, minutes and seconds.
+
+    Args
+    ----
+        angle (float): decimal degrees.
+        sec (bool, optional): whether or not to compute seconds
+
+    Return
+    ------
+        dms (tuple): degrees, minutes and seconds.
+
+    """
+
+    # Split whole integer and decimal parts
+    decimal_part, degrees = math.modf(angle)
+
+    # Degrees are integer part
+    degrees = int(degrees)
+
+    # Multiply the decimal part by 60: 0.3478 * 60 = 20.868
+    # Split the whole number part of the total as the minutes: 20
+    # abs() absoulte value - no negative
+    minutes = abs(int(math.modf(decimal_part * 60)[1]))
+
+    # Multiply the decimal part of the split above by 60 to get the seconds
+    # 0.868 x 60 = 52.08, round excess decimal places to 2 places
+    # abs() absoulte value - no negative
+    if sec is True:
+        seconds = abs(round(math.modf(decimal_part * 60)[0] * 60, 2))
+
+    if sec is True:
+        return degrees, minutes, seconds
+    else:
+        return degrees, minutes
+
+
+def minus_formatter(s):
+    """ Mathematical minus formatter.
+
+    Args
+    ----
+        s (str): a string into which to look for minus sign.
+
+    Return
+    ------
+        s_fmt (str): minus-formatted string.
+    """
+    return "{}".format(s).replace("-", u"\u2212")
+
+
+def dmsfmt(degrees, minutes):
+    """ String formatting of degrees and minutes.
+
+    Args
+    ----
+        degrees (int): degrees
+        mminutes (int): mminutes
+
+    Return
+    ------
+        fmt (str): a formatted degrees and minute string.
+    """
+
+    dms = '{}\N{DEGREE SIGN}{}'
+    if minutes > 0:
+        fmt = minus_formatter(dms.format(degrees, minutes))
+    else:
+        fmt = minus_formatter(dms.format(degrees, ''))
+
+    return fmt
+
+
 class Map(geoaxes.GeoAxes):
     """ Create a map based on cartopy GeoAxes.
 
@@ -224,12 +300,14 @@ class Map(geoaxes.GeoAxes):
         self.xaxis.set_tick_params(length=0, labelsize=size)
         self.yaxis.set_tick_params(length=0, labelsize=size)
 
-        degree = u'\N{DEGREE SIGN}'
-        dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
-        lons = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lon]
-        lats = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lat]
-        lons = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
-        lats = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
+        # degree = u'\N{DEGREE SIGN}'
+        # dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
+        # lons = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lon]
+        # lats = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lat]
+        # lons = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
+        # lats = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
+        lons = [dmsfmt(*dd2dms(l)) for l in inner_lon]
+        lats = [dmsfmt(*dd2dms(l)) for l in inner_lat]
         self.set_xticklabels(lons)
         self.set_yticklabels(lats)
         self.set_extent(outer)
