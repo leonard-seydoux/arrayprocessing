@@ -172,7 +172,7 @@ class Stream(obspy.core.stream.Stream):
         waitbar = ap.logtable.waitbar('Read data')
         for trace_id, trace in enumerate(data_matrix):
             waitbar.progress((trace_id + 1) / n_traces)
-            self += obspy.core.trace.Trace(data=trace, header=stats)
+            self[trace_id].data = trace
 
     def cut(self, starttime=None, endtime=None, pad=True, fill_value=0):
         """A wrapper to the trim function with string dates or datetimes.
