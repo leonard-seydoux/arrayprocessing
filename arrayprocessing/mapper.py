@@ -299,13 +299,6 @@ class Map(geoaxes.GeoAxes):
         self.set_yticks(inner_lat)
         self.xaxis.set_tick_params(length=0, labelsize=size)
         self.yaxis.set_tick_params(length=0, labelsize=size)
-
-        # degree = u'\N{DEGREE SIGN}'
-        # dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
-        # lons = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lon]
-        # lats = [dms.format(np.floor(l), l % 1 * 60) for l in inner_lat]
-        # lons = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
-        # lats = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
         lons = [dmsfmt(*dd2dms(l)) for l in inner_lon]
         lats = [dmsfmt(*dd2dms(l)) for l in inner_lat]
         self.set_xticklabels(lons)
@@ -328,13 +321,8 @@ class Map(geoaxes.GeoAxes):
 
         self.set_xticks(extent_lon)
         self.set_yticks(extent_lat)
-
-        degree = u'\N{DEGREE SIGN}'
-        dms = '{:.0f}\N{DEGREE SIGN}{:.0f}'
-        lons = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lon]
-        lats = [dms.format(np.floor(l), l % 1 * 60) for l in extent_lat]
-        lonlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lons]
-        latlabels = [l.replace(u'\N{DEGREE SIGN}0', degree) for l in lats]
+        lonlabels = [dmsfmt(*dd2dms(l)) for l in extent_lon]
+        latlabels = [dmsfmt(*dd2dms(l)) for l in extent_lat]
         self.set_xticklabels(lonlabels)
         self.set_yticklabels(latlabels)
 
@@ -411,19 +399,16 @@ class Map(geoaxes.GeoAxes):
         extent = self.get_extent()
         globe = crs.Orthographic(central_longitude=extent[0],
                                  central_latitude=extent[2])
-
-        # Add axes
         ax = self.figure.add_axes(position, projection=globe)
-        ax.outline_patch.set_lw(0.7)
-        ax.outline_patch.set_edgecolor('0.5')
-        ax.add_feature(nef('physical', 'land', '110m'), facecolor=land_color,
-                       lw=0.3, edgecolor=land_line_color)
-        ax.add_feature(nef('physical', 'ocean', '110m'),
-                       facecolor=ocean_color, lw=0)
+        ax.outline_patch.set_lw(0.5)
+        lands = nef('physical', 'land', '110m')
+        oceans = nef('physical', 'ocean', '110m')
+        ax.add_feature(lands, facecolor=land_color, lw=0)
+        ax.add_feature(oceans, facecolor=ocean_color, lw=0)
         ax.set_global()
 
         # Grid
-        gl = ax.gridlines(linewidth=0.3, linestyle='-')
+        gl = ax.gridlines(linewidth=0.2, linestyle='-')
         gl.xlocator = ticker.FixedLocator(range(-180, 181, 20))
         gl.ylocator = ticker.FixedLocator(range(-90, 91, 15))
 
@@ -431,7 +416,7 @@ class Map(geoaxes.GeoAxes):
         globe = crs.Orthographic(central_longitude=150, central_latitude=0)
         ax = self.figure.add_axes(position, projection=globe)
         ax.background_patch.set_fill(False)
-        ax.outline_patch.set_lw(0.7)
+        ax.outline_patch.set_lw(0)
         ax.outline_patch.set_edgecolor('0.5')
         shift = 5
         night = np.arctan(np.linspace(-2 * shift, 2 * shift, 500) + shift) - \
@@ -442,7 +427,7 @@ class Map(geoaxes.GeoAxes):
                   alpha=0.5, transform=crs.PlateCarree(),
                   interpolation='bicubic')
 
-        ax.plot(extent[0], extent[2], 's', **kawrgs)
+        ax.plot(extent[0], extent[2], 's', alpha=1, zorder=20, **kawrgs)
 
     def add_lands(self, res='10m', lw=0.3, c='k', fc=(0, 0, 0, 0)):
         """ Add coastlines with scalable linewidth

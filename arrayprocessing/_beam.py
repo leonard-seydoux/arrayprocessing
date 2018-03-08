@@ -47,7 +47,7 @@ class Beam():
 
     def compute_music(self, covariance, rank=1, epsilon=1e-10):
 
-        covariance = covariance.get_data(self._frequency)
+        # covariance = covariance.get_data(self._frequency)
         eigenvectors, eigenvalues, _ = svd(covariance)
         eigenvalues[:rank] = 0.0
         eigenvalues[rank:] = 1.0

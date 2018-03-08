@@ -5,7 +5,7 @@
 # matrix analsysis of array data.
 
 from arrayprocessing import logtable
-from arrayprocessing.data import Stream, read, h5read
+from arrayprocessing.data import Stream, read, h5read, matread
 from arrayprocessing._reader import read_spectral_width
 from arrayprocessing.covariance import CovarianceMatrix, RealCovariance
 from arrayprocessing.correlation import CorrelationMatrix, correlation

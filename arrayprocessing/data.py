@@ -49,6 +49,16 @@ def h5read(*args, **kwargs):
     return data
 
 
+def matread(*args, **kwargs):
+    """
+    Top-level read function, returns Stream object.
+    """
+
+    data = ap.Stream()
+    data.matread(*args, **kwargs)
+    return data
+
+
 class Stream(obspy.core.stream.Stream):
 
     def __init__(self):
@@ -155,6 +165,42 @@ class Stream(obspy.core.stream.Stream):
             stats.station = station_code.split('.')[0]
             self += obspy.core.trace.Trace(data=data, header=stats)
 
+    def matread(self, data_path, data_name='data', starttime=0,
+                sampling_rate=25.0, decimate=1):
+        """
+        Read the data files specified in the datapath.
+
+        Arguments
+        ---------
+        :datapath (str or list): datapath with a single data file or with
+        UNIX regexp, or a list of files.
+
+        Keyword arguments
+        -----------------
+
+        :sort (bool): whether or not the different traces are sorted in
+        alphabetic order with respect to the station codes.
+        """
+
+        # Read meta
+        traces = np.array(h5py.File(data_path, 'r')[data_name])
+        n_stations, n_times = traces.shape
+
+        # Header
+        stats = obspy.core.trace.Stats()
+        stats.sampling_rate = sampling_rate
+        stats.npts = n_times
+
+        # Start time
+        stats.starttime = obspy.UTCDateTime(starttime)
+
+        # Collect data into data np.array
+        waitbar = ap.logtable.waitbar('Read data')
+        for station in range(0, n_stations, decimate):
+            waitbar.progress((station + 1) / n_stations)
+            data = traces[station, :]
+            self += obspy.core.trace.Trace(data=data, header=stats)
+
     def set_data(self, data_matrix, starttime, sampling_rate):
         """
         Set the data from any external set of traces.
@@ -172,7 +218,7 @@ class Stream(obspy.core.stream.Stream):
         waitbar = ap.logtable.waitbar('Read data')
         for trace_id, trace in enumerate(data_matrix):
             waitbar.progress((trace_id + 1) / n_traces)
-            self[trace_id].data = trace
+            self.data = self.trace
 
     def cut(self, starttime=None, endtime=None, pad=True, fill_value=0):
         """A wrapper to the trim function with string dates or datetimes.
@@ -319,7 +365,7 @@ class Stream(obspy.core.stream.Stream):
         self.cut(pad=True, fill_value=0, starttime=self[0].stats.starttime,
                  endtime=self[0].stats.starttime + duration)
 
-    def show(self, ax=None, scale=0.5, path_figure=None, **kwargs):
+    def show(self, ax=None, scale=0.5, index=0, path_figure=None, **kwargs):
         """ Plot all seismic traces.
 
         The date axis is automatically defined with matplotlib.dates.
@@ -534,7 +580,7 @@ class Stream(obspy.core.stream.Stream):
 
         # Get station index from code
         if code is None:
-            spectrum = self.spectra[0, :, :]
+            spectrum = self.spectra[7, :, :]
         else:
             stations = [stream.stats.station for stream in self]
             station_index = [i for i, s in enumerate(stations) if code in s]
