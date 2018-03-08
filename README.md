@@ -87,9 +87,28 @@ stream = ap.read('/path/to/traces/*.sac')
 spectrogram, frequencies, times = stream.stft(segment_duration_sec=16, bandwidth=[3, 10])
 ```
 
+
+### Show speectrograms
+
+You can show the spectrograms with the `spectrogram` method. Doc will come soon.
+
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_data.png)
+
 ## Show speectrograms
 
 You can show the spectrograms with the `spectrogram` method. Doc will come soon.
+
+
+
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_covariance.png)
+
+## correlation.py
+
+![](https://github.com/leonard-seydoux/arrayprocessing/blob/master/arrayprocessing_mindmap_correlation.png)
+
+## antenna.py
+
+## synthetic.py
 
 # To-do list
 
