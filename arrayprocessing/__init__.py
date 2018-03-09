@@ -13,3 +13,4 @@ from arrayprocessing.antenna import Antenna
 from arrayprocessing.mapper import Map
 from arrayprocessing._beam import Beam
 from arrayprocessing import synthetic
+from arrayprocessing import dem

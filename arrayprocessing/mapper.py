@@ -27,6 +27,8 @@ from cartopy.io.ogc_clients import WMTSRasterSource
 from copy import deepcopy
 from cartopy.feature import NaturalEarthFeature as nef
 from cartopy.crs import TransverseMercator
+from arrayprocessing import dem
+from matplotlib.colors import LightSource
 
 
 import math
@@ -482,6 +484,55 @@ class Map(geoaxes.GeoAxes):
         text_y = bottom + (top - bottom) * (location[1] + 0.01)
         self.text(bar_x, text_y, bar_text, transform=tmc, ha='center',
                   va='bottom', weight='normal')
+
+    def add_dem(self, dem_file, cpt_topography=None,
+                cpt_bathymetry=None, sun_azimuth=230,
+                sun_altitude=15, topo_exag=100, bathy_exag=100):
+
+        # Read dem
+        lon, lat, elevation = dem.read(dem_file)
+        georef = [lon[0], lon[-1], lat[0], lat[-1]]
+        cmap_topo = dem.cpt(cpt_topography)
+        cmap_bathy = dem.cpt(cpt_bathymetry)
+
+        # Sun properties
+        sun = LightSource(azdeg=sun_azimuth, altdeg=sun_altitude)
+        sun_kw = dict(blend_mode='soft')
+
+        # Add topography
+        topo = elevation.copy()
+        topo[topo < 0] = 0
+        img = (topo - np.nanmin(topo)) / (np.nanmax(topo) - np.nanmin(topo))
+        img = sun.shade(img, cmap=cmap_topo, vert_exag=topo_exag,
+                        fraction=1.1, **sun_kw)
+        self.plot_img(img, extent=georef)
+
+        # Colorbar
+        img = self.plot_img(topo, cmap=cmap_topo)
+        img.remove()
+        cax = self.figure.add_axes([1.1, 0.4, 0.03, 0.4])
+        plt.colorbar(img, cax=cax, extend='max')
+
+        # Bathymetry
+        bathy = elevation.copy()
+        bathy[bathy >= 0] = 0
+        img = (bathy - np.nanmin(bathy)) /\
+            (np.nanmax(bathy) - np.nanmin(bathy))
+        img = sun.shade(img, cmap=cmap_bathy,
+                        vert_exag=bathy_exag, fraction=1, **sun_kw)
+        img[bathy == 0, -1] = 0
+        self.plot_img(img, extent=georef)
+
+        # Colorbar
+        img = self.plot_img(bathy, cmap=cmap_bathy)
+        img.remove()
+        cax = self.figure.add_axes([1.1, 0.2, 0.03, 0.2])
+        plt.colorbar(img, cax=cax, extend='min')
+
+        # Colorbars label
+        cb_label = 'Elevation (m)'
+        self.figure.text(1.25, .5, cb_label, va='center',
+                         rotation=90, weight='normal')
 
     def save(self, path, **kwargs):
         """ Save the axes' figure to the given path.
