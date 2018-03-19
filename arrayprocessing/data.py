@@ -160,7 +160,10 @@ class Stream(obspy.core.stream.Stream):
         waitbar = ap.logtable.waitbar('Read data')
         for station, station_code in enumerate(station_codes):
             waitbar.progress((station + 1) / n_stations)
-            data = traces[name][station_code][channel][:]
+            try:
+                data = traces[name][station_code][channel][:]
+            except KeyError:
+                data = np.zeros(sampling_rate * 24 * 3600 - 1)
             stats.npts = len(data)
             stats.station = station_code.split('.')[0]
             self += obspy.core.trace.Trace(data=data, header=stats)
