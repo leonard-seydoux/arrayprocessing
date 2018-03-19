@@ -409,6 +409,7 @@ class Stream(obspy.core.stream.Stream):
         self.sort()
         traces = np.array([s.data for s in self])
         traces = traces / traces.max()
+
         if robust.mad(traces).max() > 0:
             traces /= 1.2 * robust.mad(traces).max()
 
@@ -485,6 +486,7 @@ class Stream(obspy.core.stream.Stream):
         kwargs.setdefault('window', 'hann')
         kwargs.setdefault('return_onesided', True)
         kwargs.setdefault('boundary', None)
+        kwargs.setdefault('padded', False)
 
         # Calculate spectra of each trace
         spectra = list()
