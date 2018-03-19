@@ -163,7 +163,7 @@ class Stream(obspy.core.stream.Stream):
             try:
                 data = traces[name][station_code][channel][:]
             except KeyError:
-                data = np.zeros(int(sampling_rate * 24 * 3600))
+                data = np.random.rand(int(sampling_rate * 24 * 3600))
             stats.npts = len(data)
             stats.station = station_code.split('.')[0]
             self += obspy.core.trace.Trace(data=data, header=stats)
